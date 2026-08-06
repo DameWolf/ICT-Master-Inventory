@@ -105,7 +105,6 @@ export default function HomePage({
           </div>
 
           <h1 className="hero-title">
-            Smart &amp; Interactive <br />
             <span className="hero-title-gradient">ICT Hardware Inventory</span>
           </h1>
 

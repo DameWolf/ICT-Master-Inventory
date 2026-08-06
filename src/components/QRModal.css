@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   QR MODAL & QR CARD — Maroon · Gold · White Neumorphism
+   QR MODAL & DEVICE ASSET STICKER — Maroon · Gold · White
 ═══════════════════════════════════════════════════════ */
 
 /* ── Modal Backdrop ── */
@@ -7,13 +7,13 @@
   position: fixed;
   inset: 0;
   z-index: 3000;
-  background: rgba(43, 15, 25, 0.65);
-  backdrop-filter: blur(6px);
+  background: rgba(30, 8, 16, 0.7);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  animation: qr-backdrop-in 0.18s ease;
+  animation: qr-backdrop-in 0.2s ease;
 }
 
 @keyframes qr-backdrop-in {
@@ -23,24 +23,24 @@
 
 /* ── Modal Shell ── */
 .qr-modal {
-  background: #f9f6f0;
+  background: #fdfcf9;
   border-radius: 24px;
   padding: 24px;
   width: 100%;
-  max-width: 400px;
+  max-width: 440px;
   box-shadow:
     -8px -8px 20px #ffffff,
-    10px 10px 30px rgba(128, 0, 32, 0.22),
-    0 0 0 1px rgba(212, 175, 55, 0.3);
+    12px 12px 36px rgba(128, 0, 32, 0.25),
+    0 0 0 1px rgba(212, 175, 55, 0.35);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   animation: qr-modal-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @keyframes qr-modal-in {
-  from { transform: scale(0.88) translateY(20px); opacity: 0; }
-  to   { transform: scale(1)    translateY(0);    opacity: 1; }
+  from { transform: scale(0.9) translateY(18px); opacity: 0; }
+  to   { transform: scale(1)   translateY(0);    opacity: 1; }
 }
 
 /* ── Modal Header ── */
@@ -106,6 +106,60 @@
   color: #ef4444;
 }
 
+/* ── Size Preset Selector ── */
+.qr-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f4efe7;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid #e5dcca;
+}
+
+.qrs-size-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #800020;
+  margin-right: 4px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.size-btn {
+  flex: 1;
+  padding: 6px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #5c3545;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.size-btn:hover {
+  color: #800020;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.size-btn.active {
+  background: #ffffff;
+  color: #800020;
+  border-color: #d4af37;
+  box-shadow: -2px -2px 4px #ffffff, 2px 2px 6px rgba(120, 30, 50, 0.1);
+  font-weight: 800;
+}
+
+.qr-preview-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0;
+}
+
 .qr-modal-hint {
   font-size: 11px;
   color: #7a5866;
@@ -115,115 +169,138 @@
 }
 
 /* ═══════════════════════════════════════════════════════
-   QR CARD — used both inside modal and in the drawer
+   PHYSICAL DEVICE ASSET STICKER CARD
 ═══════════════════════════════════════════════════════ */
 .qr-card {
   background: #ffffff;
-  border-radius: 20px;
-  padding: 20px;
+  border-radius: 16px;
+  padding: 16px;
   box-shadow:
     -4px -4px 10px #ffffff,
     5px 5px 16px rgba(120, 30, 50, 0.1);
-  border: 1px solid #e5dcca;
+  border: 2px solid #800020;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+/* Size Presets */
+.qr-card-mini {
+  width: 200px;
+  padding: 12px;
+  border-radius: 12px;
+  gap: 6px;
+}
+
+.qr-card-standard {
+  width: 260px;
+  padding: 16px;
+  border-radius: 16px;
+  gap: 10px;
+}
+
+.qr-card-badge {
+  width: 310px;
+  padding: 20px;
+  border-radius: 18px;
+  gap: 12px;
 }
 
 /* Header row: logo + system name + category */
 .qrc-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
+  border-bottom: 1px solid #e8dfd1;
+  padding-bottom: 8px;
 }
 
 .qrc-logo {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #ffd700;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  border: 1.5px solid #ffd700;
   flex-shrink: 0;
 }
 
 .qrc-header-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  align-items: flex-start;
 }
 
 .qrc-sys-name {
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 900;
   color: #800020;
   line-height: 1;
+  letter-spacing: 0.5px;
 }
 
 .qrc-cat-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 10px;
+  gap: 3px;
+  font-size: 9px;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 20px;
+  padding: 1px 6px;
+  border-radius: 10px;
   border: 1px solid;
-  line-height: 1.6;
 }
 
 /* QR code wrapper */
 .qrc-qr-wrap {
-  padding: 10px;
+  padding: 8px;
   background: #ffffff;
-  border-radius: 14px;
-  border: 2px solid #e5dcca;
-  box-shadow: inset 2px 2px 6px rgba(120, 30, 50, 0.07);
+  border-radius: 10px;
+  border: 1.5px solid #d4af37;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* Caption — department / office */
+/* Main Caption & Asset Tag */
 .qrc-caption {
-  text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-}
-
-.qrc-dept {
-  font-size: 22px;
-  font-weight: 900;
-  color: #800020;
-  line-height: 1.1;
-  letter-spacing: -0.3px;
+  gap: 2px;
 }
 
 .qrc-tag {
-  font-size: 11px;
-  font-weight: 700;
-  color: #7a5866;
-  background: #f8f4ee;
-  border: 1px solid #d4af37;
-  padding: 2px 10px;
-  border-radius: 20px;
+  font-size: 16px;
+  font-weight: 900;
+  color: #800020;
+  letter-spacing: 0.5px;
+}
+
+.qrc-dept {
+  font-size: 12px;
+  font-weight: 800;
+  color: #2b0f19;
 }
 
 /* Device row */
 .qrc-device-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5c3545;
 }
 
-.qrc-icon { font-size: 20px; }
+.qrc-icon { font-size: 16px; }
 
 .qrc-device-name {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   color: #2b0f19;
 }
@@ -232,30 +309,31 @@
 .qrc-details {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 6px;
   width: 100%;
   background: #faf7f2;
-  border-radius: 12px;
-  padding: 14px;
+  border-radius: 8px;
+  padding: 8px;
   border: 1px solid #f0e8e0;
 }
 
 .qrc-detail-item {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
+  text-align: left;
 }
 
 .qrc-dl {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
   color: #7a5866;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
 }
 
 .qrc-dv {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: #2b0f19;
   overflow: hidden;
@@ -266,10 +344,10 @@
 .qrc-status { font-weight: 800 !important; }
 
 .qrc-footer {
-  font-size: 10px;
-  color: #9c7b88;
-  font-style: italic;
-  text-align: center;
+  font-size: 8px;
+  font-weight: 800;
+  color: #800020;
+  letter-spacing: 0.5px;
 }
 
 /* ── Inline QR Panel inside Drawer ── */
@@ -314,6 +392,7 @@
   .qr-modal-backdrop,
   .qr-modal-header,
   .qr-modal-actions,
+  .qr-size-selector,
   .qr-modal-hint { display: none !important; }
   .qr-modal {
     box-shadow: none;

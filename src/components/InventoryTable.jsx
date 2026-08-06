@@ -4,6 +4,7 @@ import { getColumnsForCategory, DEFAULT_COLUMNS } from "../hooks/useSheetInvento
 import ItemModal from "./ItemModal";
 import ItemDetailDrawer from "./ItemDetailDrawer";
 import QRModal from "./QRModal";
+import BatchQRModal from "./BatchQRModal";
 import "./InventoryTable.css";
 
 const STATUSES = ["Functional", "For Upgrade", "For Replacement", "Defective"];
@@ -89,6 +90,7 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [drawerItem, setDrawerItem]     = useState(null);
   const [qrItem, setQrItem]             = useState(null);
+  const [batchQrOpen, setBatchQrOpen]   = useState(false);
   const [currentPage, setCurrentPage]  = useState(1);
   const [filtersOpen, setFiltersOpen]  = useState(false);
   const PAGE_SIZE = 15;
@@ -183,6 +185,9 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
           <p className="inv-subtitle">{filtered.length.toLocaleString()} records · Google Sheets live data</p>
         </div>
         <div className="inv-header-actions">
+          <button className="btn-export" onClick={() => setBatchQrOpen(true)} id="btn-batch-qr" title="Print Sticker Sheets">
+            <span>🏷️</span><span className="btn-label">QR Stickers</span>
+          </button>
           <button className="btn-export" onClick={exportCSV} id="btn-export">
             <span>📤</span><span className="btn-label">Export CSV</span>
           </button>
@@ -388,6 +393,11 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
       {/* QR Modal */}
       {qrItem && (
         <QRModal item={qrItem} onClose={() => setQrItem(null)} />
+      )}
+
+      {/* Batch QR Stickers Modal */}
+      {batchQrOpen && (
+        <BatchQRModal items={filtered} onClose={() => setBatchQrOpen(false)} />
       )}
 
       {/* Drawer */}

@@ -5,9 +5,86 @@ import logoImg from "../assets/logo.jpg";
 import "./QRScanner.css";
 
 /* ─── Parse the text payload encoded in the QR ─── */
-function parseQRPayload(raw) {
+function parseQRPayload(raw, items = []) {
   const result = {};
-  const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
+  const rawStr = (raw || "").trim();
+
+  // Compact sticker payload: ICT:AssetTag:ID
+  if (rawStr.startsWith("ICT:")) {
+    const parts = rawStr.split(":");
+    const tag = parts[1] || "";
+    const id  = parts[2] || parts[1] || "";
+
+    const matched = items.find(
+      (i) => (tag && i.assetTag?.toString() === tag) || (id && i.id?.toString() === id)
+    );
+
+    if (matched) {
+      return {
+        isICT: true,
+        category: matched.category,
+        device: matched.deviceType || matched.name,
+        campus: matched.campus,
+        department: matched.department,
+        assigned_to: matched.assignedUser,
+        status: matched.status,
+        year: matched.yearPurchased,
+        processor: matched.processor,
+        ram: matched.ram,
+        os: matched.os,
+        storage: matched.storage,
+        brand: matched.brand,
+        model: matched.model,
+        asset_tag: matched.assetTag || tag,
+        id: matched.id,
+        matchedItem: matched,
+      };
+    }
+
+    return {
+      isICT: true,
+      asset_tag: tag,
+      id: id,
+    };
+  }
+
+  // URL deep link format: .../?assetTag=39250
+  if (rawStr.includes("assetTag=") || rawStr.includes("id=")) {
+    try {
+      const url = new URL(rawStr);
+      const tag = url.searchParams.get("assetTag") || "";
+      const id  = url.searchParams.get("id") || "";
+      const matched = items.find(
+        (i) => (tag && i.assetTag?.toString() === tag) || (id && i.id?.toString() === id)
+      );
+
+      if (matched) {
+        return {
+          isICT: true,
+          category: matched.category,
+          device: matched.deviceType || matched.name,
+          campus: matched.campus,
+          department: matched.department,
+          assigned_to: matched.assignedUser,
+          status: matched.status,
+          year: matched.yearPurchased,
+          processor: matched.processor,
+          ram: matched.ram,
+          os: matched.os,
+          storage: matched.storage,
+          brand: matched.brand,
+          model: matched.model,
+          asset_tag: matched.assetTag || tag,
+          id: matched.id,
+          matchedItem: matched,
+        };
+      }
+    } catch (_) {}
+  }
+
+  // Legacy multiline text payload
+  const isICTText = rawStr.includes("ICT Hardware Inventory") || rawStr.includes("ICT HARDWARE ASSET");
+  const lines = rawStr.split("\n").map((l) => l.trim()).filter(Boolean);
   for (const line of lines) {
     const colonIdx = line.indexOf(":");
     if (colonIdx === -1) continue;
@@ -15,6 +92,7 @@ function parseQRPayload(raw) {
     const val = line.slice(colonIdx + 1).trim();
     if (val && val !== "—") result[key] = val;
   }
+  result.isICT = isICTText;
   return result;
 }
 
@@ -28,7 +106,7 @@ function statusColor(s) {
 
 /* ─── Result Card shown after successful scan ─── */
 function ScanResultCard({ parsed, rawText, onFindInInventory, onScanAgain }) {
-  const isICT = rawText.includes("ICT Hardware Inventory");
+  const isICT = parsed?.isICT || rawText.includes("ICT Hardware Inventory") || rawText.includes("ICT HARDWARE ASSET");
   const meta  = isICT ? getCategoryMeta(parsed.category) : null;
 
   if (!isICT) {
@@ -100,7 +178,7 @@ function ScanResultCard({ parsed, rawText, onFindInInventory, onScanAgain }) {
       {/* Actions */}
       <div className="sr-actions">
         {onFindInInventory && (
-          <button className="scan-btn-find" onClick={() => onFindInInventory(parsed)}>
+          <button className="scan-btn-find" onClick={() => onFindInInventory(parsed.matchedItem || parsed)}>
             🔍 Find in Inventory
           </button>
         )}
@@ -111,7 +189,7 @@ function ScanResultCard({ parsed, rawText, onFindInInventory, onScanAgain }) {
 }
 
 /* ─── Main QR Scanner Modal ─── */
-export default function QRScanner({ onClose, onFindInInventory }) {
+export default function QRScanner({ items = [], onClose, onFindInInventory }) {
   const scannerRef   = useRef(null);
   const html5QrRef   = useRef(null);
   const fileInputRef = useRef(null);
@@ -151,7 +229,7 @@ export default function QRScanner({ onClose, onFindInInventory }) {
           aspectRatio: 1.0,
         },
         (decodedText) => {
-          const parsed = parseQRPayload(decodedText);
+          const parsed = parseQRPayload(decodedText, items);
           setResult({ raw: decodedText, parsed });
           setScanning(false);
           // stop after first successful scan
@@ -164,7 +242,7 @@ export default function QRScanner({ onClose, onFindInInventory }) {
       setError("Camera access denied or not available. Try uploading an image instead.");
       setScanning(false);
     }
-  }, []);
+  }, [items]);
 
   /* ── Enumerate cameras on mount ── */
   useEffect(() => {
@@ -231,7 +309,7 @@ export default function QRScanner({ onClose, onFindInInventory }) {
       const qr = new Html5Qrcode("qr-scanner-viewport");
       html5QrRef.current = qr;
       const decodedText = await qr.scanFile(file, true);
-      const parsed = parseQRPayload(decodedText);
+      const parsed = parseQRPayload(decodedText, items);
       setResult({ raw: decodedText, parsed });
     } catch (_) {
       setError("Could not read a QR code from the uploaded image. Try a clearer photo.");

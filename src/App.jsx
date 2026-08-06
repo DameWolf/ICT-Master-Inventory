@@ -111,6 +111,7 @@ function App() {
       {/* QR Scanner Modal */}
       {scannerOpen && (
         <QRScanner
+          items={inventory}
           onClose={() => setScannerOpen(false)}
           onFindInInventory={handleFindFromQR}
         />

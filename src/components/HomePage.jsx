@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { CATEGORIES, STATUS_COLORS } from "../data/inventoryData";
+import React, { useState, useMemo } from "react";
+import { CATEGORIES } from "../data/inventoryData";
 import logoImg from "../assets/logo.jpg";
 import heroIllustration from "../assets/hero_it_illustration.png";
 import "./HomePage.css";
@@ -11,10 +11,9 @@ export default function HomePage({
   onViewAllTable,
   onScannerOpen,
   onBatchQrOpen,
-  onAddDevice,
 }) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+  const [mousePos, setMousePos] = useState({ x: 50, y: 50, parallaxX: 0, parallaxY: 0 });
   const [tiltCards, setTiltCards] = useState({});
 
   const total          = inventory.length;
@@ -25,12 +24,15 @@ export default function HomePage({
 
   const funcPct = total > 0 ? Math.round((functional / total) * 100) : 0;
 
-  // Track mouse coordinates for background spotlight glow
+  // Track mouse coordinates for background spotlight glow & 3D parallax offset
   const handleMouseMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = Math.round(((e.clientX - rect.left) / rect.width) * 100);
     const y = Math.round(((e.clientY - rect.top) / rect.height) * 100);
-    setMousePos({ x, y });
+    const parallaxX = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
+    const parallaxY = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
+
+    setMousePos({ x, y, parallaxX, parallaxY });
   };
 
   // 3D Magnetic card tilt effect on mouse move over category cards
@@ -68,9 +70,21 @@ export default function HomePage({
       style={{
         "--spotlight-x": `${mousePos.x}%`,
         "--spotlight-y": `${mousePos.y}%`,
+        "--parallax-x": mousePos.parallaxX,
+        "--parallax-y": mousePos.parallaxY,
       }}
     >
-      {/* Background Interactive Glow Overlay */}
+      {/* ── Interactive 3D Background Illustration Canvas ── */}
+      <div className="home-bg-illustration-layer">
+        <img
+          src={heroIllustration}
+          alt="Interactive 3D IT Infrastructure"
+          className="bg-it-img"
+        />
+        <div className="bg-gradient-overlay" />
+      </div>
+
+      {/* Background Interactive Spotlight Glow Overlay */}
       <div className="home-spotlight-layer" />
 
       {/* ── Hero Banner Section ── */}
@@ -123,24 +137,6 @@ export default function HomePage({
             <div className="hm-pill bad">
               <span className="hm-val">{defective.toLocaleString()}</span>
               <span className="hm-lbl">Defective</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Modern IT 3D Illustration Column ── */}
-        <div className="hero-illustration-col">
-          <div className="illustration-glow-wrap">
-            <img
-              src={heroIllustration}
-              alt="Modern IT Hardware Infrastructure"
-              className="hero-it-img"
-            />
-            <div className="floating-badge badge-top">
-              <span className="fb-dot ok" />
-              <span>Google Sheets Live Sync Connected</span>
-            </div>
-            <div className="floating-badge badge-bottom">
-              <span>📱 QR Scanner Ready</span>
             </div>
           </div>
         </div>

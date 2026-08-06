@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cinzel:wght@600;700;800&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-y: scroll;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #f2ede7; /* Soft Warm Ivory / Light Cream Canvas */
+  color: #2b0f19; /* Deep Maroon Charcoal */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+}
+
+/* Light Neumorphic Scrollbar with Maroon & Gold highlights */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #e6dfd6; }
+::-webkit-scrollbar-thumb {
+  background: #c29da9;
+  border-radius: 6px;
+  border: 1px solid #d4af37;
+}
+::-webkit-scrollbar-thumb:hover { background: #800020; }
+
+/* Focus ring in Liceo Gold & Maroon */
+:focus-visible {
+  outline: 2px solid #800020;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+
+button, input, select, textarea { font-family: inherit; }
+
+@media (max-width: 639px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

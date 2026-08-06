@@ -1,0 +1,174 @@
+/* ═══════════════════════════════
+   SETTINGS MODAL — MAROON, GOLD & WHITE NEUMORPHISM
+═══════════════════════════════ */
+.settings-modal {
+  background: #fdfcf9;
+  border: 1px solid #d4af37;
+  border-top: 4px solid #800020;
+  border-radius: 24px;
+  max-width: 540px;
+  width: 92%;
+  animation: slideUp 0.22s ease;
+  overflow: hidden;
+  box-shadow: -10px -10px 30px #ffffff, 15px 15px 45px rgba(120, 30, 50, 0.2);
+}
+
+.settings-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 24px 26px 18px;
+  border-bottom: 1px solid #e8dfd1;
+  background: linear-gradient(180deg, rgba(128, 0, 32, 0.05) 0%, rgba(253, 252, 249, 0) 100%);
+}
+
+.settings-title {
+  font-family: 'Cinzel', serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #800020;
+  margin: 0 0 4px;
+  letter-spacing: 0.5px;
+}
+
+.settings-subtitle { font-size: 13px; color: #7a5866; margin: 0; font-weight: 500; }
+
+.settings-body {
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.setup-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.step-num {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #800020, #9E1B32);
+  box-shadow: -2px -2px 5px #ffffff, 3px 3px 6px rgba(128, 0, 32, 0.25);
+  border: 1px solid #ffd700;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.step-title {
+  font-size: 13px;
+  color: #2b0f19;
+  font-weight: 700;
+  margin: 0 0 3px;
+  line-height: 1.4;
+}
+
+.step-desc {
+  font-size: 12px;
+  color: #6b4d5a;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.step-desc code {
+  background: #f3ede4;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  color: #800020;
+  font-size: 11px;
+  border: 1px solid #d4af37;
+  font-weight: 700;
+}
+
+.settings-field { display: flex; flex-direction: column; gap: 6px; }
+.settings-label { font-size: 11px; font-weight: 700; color: #7a5866; text-transform: uppercase; letter-spacing: 0.6px; }
+
+.settings-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: #ffffff;
+  box-shadow: inset 3px 3px 6px rgba(120, 30, 50, 0.12), inset -3px -3px 6px #ffffff;
+  border: 1px solid #d6c8b7;
+  border-radius: 12px;
+  color: #2b0f19;
+  font-size: 13px;
+  outline: none;
+  transition: all 0.18s;
+  box-sizing: border-box;
+  font-family: monospace;
+  font-weight: 600;
+}
+
+.settings-input:focus {
+  border-color: #800020;
+  box-shadow: inset 3px 3px 6px rgba(120, 30, 50, 0.15), 0 0 10px rgba(128, 0, 32, 0.15);
+}
+
+.status-banner {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.05);
+}
+.status-ok      { background: #ecfdf5; border: 1px solid #10b981; color: #047857; }
+.status-err     { background: #fef2f2; border: 1px solid #ef4444; color: #b91c1c; }
+.status-testing { background: #fffbe6; border: 1px solid #d4af37; color: #800020; }
+
+.settings-note {
+  font-size: 12px;
+  color: #6b4d5a;
+  background: #f8f4ee;
+  border: 1px solid #d4af37;
+  border-radius: 10px;
+  padding: 10px 14px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.settings-actions {
+  display: flex;
+  gap: 12px;
+  padding: 18px 26px 24px;
+  border-top: 1px solid #e8dfd1;
+  background: #f8f4ee;
+}
+
+.btn-test {
+  flex: 1;
+  padding: 12px;
+  background: #ffffff;
+  box-shadow: -2px -2px 6px #ffffff, 3px 3px 6px rgba(120, 30, 50, 0.12);
+  border: 1px solid #d4af37;
+  border-radius: 12px;
+  color: #800020;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.btn-test:hover:not(:disabled) { border-color: #800020; }
+
+.btn-save-settings {
+  flex: 1;
+  padding: 12px;
+  background: linear-gradient(135deg, #800020, #9E1B32);
+  box-shadow: -3px -3px 7px #ffffff, 4px 4px 12px rgba(128, 0, 32, 0.25);
+  border: 1px solid #ffd700;
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.btn-save-settings:hover { transform: translateY(-1px); color: #ffd700; }

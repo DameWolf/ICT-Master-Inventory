@@ -17,13 +17,38 @@ html, body, #root {
   overflow: hidden;
 }
 
+:root {
+  --bg-canvas: #f2ede7;
+  --text-primary: #2b0f19;
+  --text-muted: #7a5866;
+  --card-bg: #ffffff;
+  --card-border: #e5dcca;
+  --accent-gold: #d4af37;
+  --accent-maroon: #800020;
+  --topbar-bg: linear-gradient(135deg, #6b0019 0%, #800020 40%, #9E1B32 100%);
+  --shadow-card: -5px -5px 12px #ffffff, 6px 6px 16px rgba(120, 30, 50, 0.08);
+}
+
+[data-theme="dark"] {
+  --bg-canvas: #120509;
+  --text-primary: #ffffff;
+  --text-muted: rgba(255, 255, 255, 0.7);
+  --card-bg: #1d0912;
+  --card-border: rgba(212, 175, 55, 0.3);
+  --accent-gold: #ffd700;
+  --accent-maroon: #9E1B32;
+  --topbar-bg: linear-gradient(135deg, #18030b 0%, #300615 50%, #4a0920 100%);
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
 body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: #f2ede7; /* Soft Warm Ivory / Light Cream Canvas */
-  color: #2b0f19; /* Deep Maroon Charcoal */
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Light Neumorphic Scrollbar with Maroon & Gold highlights */

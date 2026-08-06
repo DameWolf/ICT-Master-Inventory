@@ -85,8 +85,8 @@ function DropdownMenu({ group, selectedCategory, onSelectCategory, inventory, is
 
 
 export default function Topbar({
-  selectedCategory, onSelectCategory, onHome, onSettings, onScannerOpen,
-  inventory = [], lastSynced, onSync,
+  selectedCategory, onSelectCategory, onHome, onDashboard, onSettings, onScannerOpen,
+  inventory = [], lastSynced, onSync, darkMode, onToggleDarkMode, activeView,
 }) {
   const [openGroup, setOpenGroup] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -112,11 +112,19 @@ export default function Topbar({
       {/* ── Desktop Nav ── */}
       <nav className="topbar-nav">
         <button
-          className={`nav-home-btn ${!selectedCategory ? "active" : ""}`}
+          className={`nav-home-btn ${activeView === "home" && !selectedCategory ? "active" : ""}`}
           onClick={onHome}
           id="nav-home"
         >
-          🏠 <span>Dashboard</span>
+          🏠 <span>Home</span>
+        </button>
+
+        <button
+          className={`nav-home-btn ${activeView === "dashboard" && !selectedCategory ? "active" : ""}`}
+          onClick={onDashboard}
+          id="nav-dashboard"
+        >
+          📊 <span>Dashboard</span>
         </button>
 
         {NAV_GROUPS.map((group) => (
@@ -134,6 +142,17 @@ export default function Topbar({
 
       {/* ── Right side ── */}
       <div className="topbar-right">
+        {/* Dark Mode Switcher */}
+        <button
+          className={`theme-toggle-btn ${darkMode ? "dark" : "light"}`}
+          onClick={onToggleDarkMode}
+          title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          id="btn-theme-toggle"
+        >
+          <span className="tt-icon">{darkMode ? "🌙" : "☀️"}</span>
+          <span className="tt-label">{darkMode ? "Dark" : "Light"}</span>
+        </button>
+
         {/* Live stats mini-pills */}
         <div className="topbar-mini-stats">
           <span className="tms-pill total">{total.toLocaleString()} total</span>
@@ -180,7 +199,11 @@ export default function Topbar({
       {/* ── Mobile dropdown ── */}
       {mobileOpen && (
         <div className="mobile-nav-panel">
-          <button className="mobile-nav-item" onClick={() => { onHome(); setMobileOpen(false); }}>🏠 Dashboard</button>
+          <button className="mobile-nav-item" onClick={() => { onHome(); setMobileOpen(false); }}>🏠 Home</button>
+          <button className="mobile-nav-item" onClick={() => { onDashboard(); setMobileOpen(false); }}>📊 Dashboard</button>
+          <button className="mobile-nav-item" onClick={() => { onToggleDarkMode(); setMobileOpen(false); }}>
+            {darkMode ? "☀️ Switch to Light Mode" : "🌙 Switch to Dark Mode"}
+          </button>
           {onScannerOpen && (
             <button className="mobile-nav-item mobile-scan-btn" onClick={() => { onScannerOpen(); setMobileOpen(false); }}>
               📷 Scan QR Code

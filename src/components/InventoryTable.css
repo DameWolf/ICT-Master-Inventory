@@ -6,6 +6,43 @@
   width: 100%;
 }
 
+[data-theme="dark"] .inv-title { color: #ffd700; border-left-color: #ffd700; }
+[data-theme="dark"] .inv-subtitle,
+[data-theme="dark"] .dept-cell,
+[data-theme="dark"] .os-cell,
+[data-theme="dark"] .storage-cell,
+[data-theme="dark"] .meta-label { color: rgba(255, 255, 255, 0.7); }
+
+[data-theme="dark"] .search-input,
+[data-theme="dark"] .table-wrap,
+[data-theme="dark"] .item-card,
+[data-theme="dark"] .btn-export,
+[data-theme="dark"] .page-btn,
+[data-theme="dark"] .campus-pill,
+[data-theme="dark"] .status-filter-btn {
+  background: #1c0a12;
+  color: #ffffff;
+  border-color: rgba(212, 175, 55, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .inv-table td {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+[data-theme="dark"] .table-row-clickable:hover,
+[data-theme="dark"] .table-row:hover td:last-child {
+  background: #2b0f1b !important;
+}
+
+[data-theme="dark"] .processor-cell,
+[data-theme="dark"] .user-cell,
+[data-theme="dark"] .item-name,
+[data-theme="dark"] .meta-value {
+  color: #ffffff !important;
+}
+
 /* ── Header ── */
 .inv-header {
   display: flex;

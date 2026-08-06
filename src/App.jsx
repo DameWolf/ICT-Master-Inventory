@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Topbar from "./components/Topbar";
+import HomePage from "./components/HomePage";
 import Dashboard from "./components/Dashboard";
 import InventoryTable from "./components/InventoryTable";
 import SettingsModal from "./components/SettingsModal";
@@ -33,10 +34,25 @@ let toastIdCounter = 0;
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [view, setView]             = useState("dashboard");
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [scannerOpen, setScannerOpen]   = useState(false);
-  const [toasts, setToasts]         = useState([]);
+  const [view, setView]                     = useState("home"); // "home" | "dashboard" | "table"
+  const [settingsOpen, setSettingsOpen]     = useState(false);
+  const [scannerOpen, setScannerOpen]       = useState(false);
+  const [toasts, setToasts]                 = useState([]);
+
+  // Dark Mode state initialized from localStorage
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem("ict_theme") === "dark";
+  });
+
+  // Apply data-theme attribute on document root whenever darkMode changes
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
+    localStorage.setItem("ict_theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
+
+  const toggleDarkMode = useCallback(() => {
+    setDarkMode((prev) => !prev);
+  }, []);
 
   const { inventory, loading, error, lastSynced, refetch, addItem, updateItem, deleteItem } =
     useSheetInventory();
@@ -58,8 +74,9 @@ function App() {
     setView("table");
   };
 
-  const handleViewAll = () => { setSelectedCategory(null); setView("table"); };
-  const handleHome    = () => { setSelectedCategory(null); setView("dashboard"); };
+  const handleViewAllTable = () => { setSelectedCategory(null); setView("table"); };
+  const handleDashboard    = () => { setSelectedCategory(null); setView("dashboard"); };
+  const handleHome         = () => { setSelectedCategory(null); setView("home"); };
 
   // ── QR Scanner: "Find in Inventory" navigates to the matched category ──
   const handleFindFromQR = useCallback((parsed) => {
@@ -80,19 +97,33 @@ function App() {
         selectedCategory={selectedCategory}
         onSelectCategory={handleSelectCategory}
         onHome={handleHome}
+        onDashboard={handleDashboard}
         onSettings={() => setSettingsOpen(true)}
         onScannerOpen={() => setScannerOpen(true)}
         inventory={inventory}
         lastSynced={lastSynced}
         onSync={refetch}
+        darkMode={darkMode}
+        onToggleDarkMode={toggleDarkMode}
+        activeView={view}
       />
 
       <main className="app-content">
-        {view === "dashboard" ? (
+        {view === "home" ? (
+          <HomePage
+            inventory={inventory}
+            onSelectCategory={handleSelectCategory}
+            onViewDashboard={handleDashboard}
+            onViewAllTable={handleViewAllTable}
+            onScannerOpen={() => setScannerOpen(true)}
+            onBatchQrOpen={handleViewAllTable}
+            onAddDevice={handleViewAllTable}
+          />
+        ) : view === "dashboard" ? (
           <Dashboard
             inventory={inventory}
             onSelectCategory={handleSelectCategory}
-            onViewAll={handleViewAll}
+            onViewAll={handleViewAllTable}
           />
         ) : (
           <InventoryTable
@@ -123,4 +154,3 @@ function App() {
 }
 
 export default App;
-

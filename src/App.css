@@ -1,10 +1,10 @@
-/* Full-width layout — no sidebar */
 .app-layout {
   display: flex;
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 0%, #f9f6f0 0%, #eae3d9 100%);
+  background: var(--bg-canvas);
+  transition: background 0.3s ease;
 }
 
 .app-content {

@@ -11,6 +11,32 @@
   width: 100%;
 }
 
+[data-theme="dark"] .kpi-card,
+[data-theme="dark"] .chart-card,
+[data-theme="dark"] .category-card {
+  background: #1c0a12;
+  border-color: rgba(212, 175, 55, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .section-title {
+  color: #ffd700;
+  border-left-color: #ffd700;
+}
+
+[data-theme="dark"] .section-sub,
+[data-theme="dark"] .kpi-label,
+[data-theme="dark"] .ct-name {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+[data-theme="dark"] .category-card-name,
+[data-theme="dark"] .chart-tooltip {
+  color: #ffffff;
+  background: #1a0810;
+  border-color: rgba(212, 175, 55, 0.35);
+}
+
 /* ── Welcome Banner ── */
 .dashboard-welcome {
   display: flex;

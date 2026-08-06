@@ -406,6 +406,35 @@ export function parseSheetCSV(csvText, tabName, startId = 1) {
     .filter(Boolean);
 }
 
+const SPREADSHEET_ID = "1D3-mLBlTAmJVOVgjspEY1w5kbVPrerSZALkyPY_C5UQ";
+
+async function fetchTabCSV(gid) {
+  // 1. Try local proxy / Vercel serverless function route first
+  try {
+    const res = await fetch(`/api/sheet-csv?gid=${gid}`);
+    if (res.ok) {
+      const text = await res.text();
+      if (text && text.trim().length > 0 && !text.trim().startsWith("<!DOCTYPE")) {
+        return text;
+      }
+    }
+  } catch (_) {}
+
+  // 2. Direct fallback to Google Sheets CSV export URL
+  try {
+    const directUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}`;
+    const res = await fetch(directUrl);
+    if (res.ok) {
+      const text = await res.text();
+      if (text && text.trim().length > 0 && !text.trim().startsWith("<!DOCTYPE")) {
+        return text;
+      }
+    }
+  } catch (_) {}
+
+  return "";
+}
+
 export function useSheetInventory() {
   const [inventory, setInventory]   = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -417,10 +446,7 @@ export function useSheetInventory() {
     setError(null);
     try {
       const requests = SHEET_TABS.map((tab) =>
-        fetch(`/api/sheet-csv?gid=${tab.gid}`)
-          .then((res) => (res.ok ? res.text() : ""))
-          .then((text) => ({ tab, text }))
-          .catch(() => ({ tab, text: "" }))
+        fetchTabCSV(tab.gid).then((text) => ({ tab, text }))
       );
 
       const results = await Promise.all(requests);

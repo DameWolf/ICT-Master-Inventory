@@ -125,13 +125,15 @@ export default function AIChat({ inventory, onOpenSettings }) {
     }
   }, [open, hasKey]);
 
-  // Re-check key when panel opens (user might have just set it)
+  // Re-check key every time the panel opens
   useEffect(() => {
     if (open) {
-      setHasKey(Boolean(getAIKey()));
-      if (error === "no_key" || error === "bad_key") setError(null);
+      const key = Boolean(getAIKey());
+      setHasKey(key);
+      if (!key) setError(null);
+      else if (error === "no_key") setError(null);
     }
-  }, [open, setError, error]);
+  }, [open]);
 
   const handleSend = useCallback(async () => {
     const text = inputVal.trim();
@@ -276,8 +278,10 @@ export default function AIChat({ inventory, onOpenSettings }) {
                   </div>
                 )}
                 {error === "api_error" && (
-                  <div className="ai-error-banner">
-                    ⚠️ Request failed. Check your internet connection and try again.
+                  <div className="ai-error-banner ai-error-banner--warn">
+                    ⚠️ Request failed. This usually means your Gemini API key is missing or invalid.
+                    <br />
+                    <button onClick={handleOpenSettings}>⚙️ Add API Key in Settings →</button>
                   </div>
                 )}
               </>

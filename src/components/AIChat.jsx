@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useAIChat, getAIKey, setAIKey } from "../hooks/useAIChat";
+import aiRobotIcon from "../assets/ai_assistant.png";
 import "./AIChat.css";
 
 const SUGGESTED_PROMPTS = [
@@ -56,7 +57,7 @@ function MessageBubble({ message }) {
     <div className={`ai-message ${isUser ? "ai-message--user" : "ai-message--ai"}`}>
       {!isUser && (
         <div className="ai-avatar" aria-label="AI">
-          ✨
+          <img src={aiRobotIcon} alt="AI" className="ai-avatar-robot-img" />
         </div>
       )}
       <div className="ai-bubble">
@@ -168,7 +169,11 @@ export default function AIChat({ inventory, onOpenSettings }) {
         id="ai-chat-fab"
         title="AI Inventory Assistant"
       >
-        <span className="ai-fab-icon">{open ? "✕" : "✨"}</span>
+        {open ? (
+          <span className="ai-fab-icon">✕</span>
+        ) : (
+          <img src={aiRobotIcon} alt="AI" className="ai-fab-robot-icon" />
+        )}
         {!open && <span className="ai-fab-label">Ask AI</span>}
         {!open && messages.length > 0 && (
           <span className="ai-fab-badge">{messages.filter((m) => m.role === "assistant").length}</span>
@@ -181,7 +186,9 @@ export default function AIChat({ inventory, onOpenSettings }) {
           {/* Header */}
           <div className="ai-panel-header">
             <div className="ai-header-left">
-              <div className="ai-header-avatar">✨</div>
+              <div className="ai-header-avatar">
+                <img src={aiRobotIcon} alt="AI Assistant" className="ai-header-robot-img" />
+              </div>
               <div>
                 <div className="ai-header-title">ICT Inventory AI</div>
                 <div className="ai-header-sub">Powered by Gemini 2.0 Flash</div>
@@ -219,7 +226,9 @@ export default function AIChat({ inventory, onOpenSettings }) {
                 {/* Welcome / suggestions */}
                 {showSuggestions && (
                   <div className="ai-welcome">
-                    <div className="ai-welcome-icon">🤖</div>
+                    <div className="ai-welcome-icon">
+                      <img src={aiRobotIcon} alt="AI Assistant" className="ai-welcome-robot-img" />
+                    </div>
                     <p className="ai-welcome-title">Hello! I'm your ICT Inventory Assistant.</p>
                     <p className="ai-welcome-sub">
                       Ask me anything about your {inventory?.length?.toLocaleString() || "–"} devices. Try a suggestion:
@@ -246,7 +255,9 @@ export default function AIChat({ inventory, onOpenSettings }) {
                     ))}
                     {isLoading && messages[messages.length - 1]?.role === "user" && (
                       <div className="ai-message ai-message--ai">
-                        <div className="ai-avatar">✨</div>
+                        <div className="ai-avatar">
+                          <img src={aiRobotIcon} alt="AI" className="ai-avatar-robot-img" />
+                        </div>
                         <div className="ai-bubble">
                           <div className="ai-bubble-content">
                             <TypingIndicator />

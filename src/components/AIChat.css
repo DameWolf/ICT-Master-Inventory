@@ -481,6 +481,38 @@
 
 [data-theme="dark"] .ai-error-banner button { color: #ffd700; }
 
+.ai-error-banner--warn {
+  background: #fffbe6;
+  border-color: #d4af37;
+  color: #7a5500;
+}
+
+[data-theme="dark"] .ai-error-banner--warn {
+  background: rgba(212, 175, 55, 0.1);
+  border-color: rgba(212, 175, 55, 0.4);
+  color: #ffd700;
+}
+
+.ai-error-banner--warn button {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 5px 12px;
+  background: linear-gradient(135deg, #800020, #9E1B32);
+  color: #ffd700 !important;
+  border: 1px solid #ffd700 !important;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.ai-error-banner--warn button:hover {
+  transform: translateY(-1px);
+  opacity: 0.9;
+}
+
 /* ── No Key Screen ── */
 .ai-nokey {
   padding: 28px 22px;

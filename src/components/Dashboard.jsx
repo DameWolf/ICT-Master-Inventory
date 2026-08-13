@@ -65,12 +65,16 @@ function SectionHeader({ title, subtitle }) {
   );
 }
 
-export default function Dashboard({ inventory, onSelectCategory, onViewAll }) {
+export default function Dashboard({ inventory, onSelectCategory, onViewAll, darkMode }) {
   const total          = inventory.length;
   const functional     = inventory.filter((i) => i.status === "Functional").length;
   const forReplacement = inventory.filter((i) => i.status === "For Replacement").length;
   const forUpgrade     = inventory.filter((i) => i.status === "For Upgrade").length;
   const defective      = inventory.filter((i) => i.status === "Defective").length;
+
+  const textColor = darkMode ? "#ffffff" : "#2b0f19";
+  const mutedColor = darkMode ? "rgba(255,255,255,0.7)" : "#7a5866";
+  const gridColor = darkMode ? "rgba(255,255,255,0.12)" : "#f0e8e0";
 
   /* ─── Status donut data ─── */
   const statusData = useMemo(() => [
@@ -197,7 +201,7 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll }) {
                   iconType="circle"
                   iconSize={10}
                   formatter={(v, e) => (
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "#2b0f19" }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: textColor }}>
                       {v} <span style={{ color: e.color }}>({e.payload.value.toLocaleString()})</span>
                     </span>
                   )}
@@ -213,8 +217,8 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll }) {
               textAlign: "center",
               pointerEvents: "none",
             }}>
-              <div style={{ fontSize: 28, fontWeight: 900, color: "#800020", lineHeight: 1 }}>{total.toLocaleString()}</div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#7a5866", marginTop: 4 }}>devices</div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: darkMode ? "#ffd700" : "#800020", lineHeight: 1 }}>{total.toLocaleString()}</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: mutedColor, marginTop: 4 }}>devices</div>
             </div>
           </div>
         </div>
@@ -224,13 +228,13 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll }) {
           <SectionHeader title="Devices by Category" subtitle="All 12 ICT hardware categories" />
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={catData} layout="vertical" margin={{ left: 10, right: 30, top: 4, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0e8e0" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11, fill: "#7a5866" }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 11, fill: mutedColor }} />
               <YAxis
                 type="category"
                 dataKey="name"
                 width={100}
-                tick={{ fontSize: 11, fill: "#2b0f19", fontWeight: 600 }}
+                tick={{ fontSize: 11, fill: textColor, fontWeight: 600 }}
               />
               <RTooltip content={<CustomTooltip />} />
               <Bar dataKey="count" name="Devices" radius={[0, 6, 6, 0]} cursor="pointer"
@@ -253,23 +257,23 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll }) {
             <AreaChart data={yearData} margin={{ left: 0, right: 20, top: 8, bottom: 4 }}>
               <defs>
                 <linearGradient id="yearGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#800020" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#800020" stopOpacity={0} />
+                  <stop offset="5%"  stopColor={darkMode ? "#ffd700" : "#800020"} stopOpacity={0.35} />
+                  <stop offset="95%" stopColor={darkMode ? "#ffd700" : "#800020"} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0e8e0" />
-              <XAxis dataKey="year" tick={{ fontSize: 11, fill: "#7a5866" }} />
-              <YAxis tick={{ fontSize: 11, fill: "#7a5866" }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis dataKey="year" tick={{ fontSize: 11, fill: mutedColor }} />
+              <YAxis tick={{ fontSize: 11, fill: mutedColor }} />
               <RTooltip content={<CustomTooltip />} />
               <Area
                 type="monotone"
                 dataKey="count"
                 name="Devices"
-                stroke="#800020"
+                stroke={darkMode ? "#ffd700" : "#800020"}
                 strokeWidth={2.5}
                 fill="url(#yearGrad)"
-                dot={{ fill: "#800020", r: 4, strokeWidth: 0 }}
-                activeDot={{ r: 6, fill: "#d4af37" }}
+                dot={{ fill: darkMode ? "#ffd700" : "#800020", r: 4, strokeWidth: 0 }}
+                activeDot={{ r: 6, fill: "#ffd700" }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -280,13 +284,13 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll }) {
           <SectionHeader title="Campus Distribution" subtitle="Devices across all campuses" />
           <ResponsiveContainer width="100%" height={230}>
             <BarChart data={campusData} margin={{ left: 0, right: 20, top: 8, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0e8e0" />
-              <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#2b0f19", fontWeight: 700 }} />
-              <YAxis tick={{ fontSize: 11, fill: "#7a5866" }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis dataKey="name" tick={{ fontSize: 12, fill: textColor, fontWeight: 700 }} />
+              <YAxis tick={{ fontSize: 11, fill: mutedColor }} />
               <RTooltip content={<CustomTooltip />} />
               <Legend iconType="circle" iconSize={10}
-                formatter={(v) => <span style={{ fontSize: 11, fontWeight: 700, color: "#2b0f19" }}>{v}</span>} />
-              <Bar dataKey="count"      name="Total"      fill="#800020" radius={[6,6,0,0]} />
+                formatter={(v) => <span style={{ fontSize: 11, fontWeight: 700, color: textColor }}>{v}</span>} />
+              <Bar dataKey="count"      name="Total"      fill={darkMode ? "#9E1B32" : "#800020"} radius={[6,6,0,0]} />
               <Bar dataKey="functional" name="Functional" fill="#22c55e" radius={[6,6,0,0]} />
               <Bar dataKey="defective"  name="Defective"  fill="#ef4444" radius={[6,6,0,0]} />
             </BarChart>
@@ -301,15 +305,15 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll }) {
           <SectionHeader title="Status Radar" subtitle="Functional vs defective per top category" />
           <ResponsiveContainer width="100%" height={270}>
             <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
-              <PolarGrid stroke="#f0e8e0" />
-              <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: "#2b0f19", fontWeight: 700 }} />
-              <PolarRadiusAxis tick={{ fontSize: 9, fill: "#7a5866" }} />
+              <PolarGrid stroke={gridColor} />
+              <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: textColor, fontWeight: 700 }} />
+              <PolarRadiusAxis tick={{ fontSize: 9, fill: mutedColor }} />
               <Radar name="Functional"      dataKey="Functional"       stroke="#22c55e" fill="#22c55e" fillOpacity={0.25} strokeWidth={2} />
               <Radar name="Defective"       dataKey="Defective"        stroke="#ef4444" fill="#ef4444" fillOpacity={0.2}  strokeWidth={2} />
               <Radar name="For Replacement" dataKey="For Replacement"  stroke="#f97316" fill="#f97316" fillOpacity={0.15} strokeWidth={1.5} />
               <RTooltip content={<CustomTooltip />} />
               <Legend iconType="circle" iconSize={10}
-                formatter={(v) => <span style={{ fontSize: 11, fontWeight: 700, color: "#2b0f19" }}>{v}</span>} />
+                formatter={(v) => <span style={{ fontSize: 11, fontWeight: 700, color: textColor }}>{v}</span>} />
             </RadarChart>
           </ResponsiveContainer>
         </div>

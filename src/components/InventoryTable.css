@@ -43,6 +43,33 @@
   color: #ffffff !important;
 }
 
+[data-theme="dark"] .btn-view,
+[data-theme="dark"] .btn-edit,
+[data-theme="dark"] .btn-delete,
+[data-theme="dark"] .btn-qr {
+  background: #280d19;
+  color: #ffffff;
+  border-color: rgba(212, 175, 55, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .btn-view:hover,
+[data-theme="dark"] .btn-edit:hover,
+[data-theme="dark"] .btn-qr:hover {
+  border-color: #ffd700;
+  color: #ffd700;
+}
+
+[data-theme="dark"] .inv-table td:last-child {
+  background: #1c0a12;
+}
+
+[data-theme="dark"] .empty-state {
+  background: #1c0a12;
+  border-color: rgba(212, 175, 55, 0.35);
+  color: rgba(255, 255, 255, 0.85);
+}
+
 /* ── Header ── */
 .inv-header {
   display: flex;

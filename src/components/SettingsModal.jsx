@@ -1,14 +1,18 @@
 import React, { useState } from "react";
 import { getAppsScriptUrl, setAppsScriptUrl, pingAppsScript } from "../hooks/useAppsScript";
+import { getAIKey, setAIKey } from "../hooks/useAIChat";
 import "./SettingsModal.css";
 
 export default function SettingsModal({ onClose }) {
   const [url, setUrl]         = useState(getAppsScriptUrl);
-  const [status, setStatus]   = useState(null); // null | "testing" | "ok" | "error"
+  const [status, setStatus]   = useState(null);
   const [errMsg, setErrMsg]   = useState("");
+  const [aiKey, setAiKeyLocal]  = useState(getAIKey);
+  const [showKey, setShowKey]   = useState(false);
 
   const handleSave = () => {
     setAppsScriptUrl(url.trim());
+    setAIKey(aiKey);
     onClose();
   };
 
@@ -90,6 +94,46 @@ export default function SettingsModal({ onClose }) {
 
           <div className="settings-note">
             💡 Your URL is stored only in this browser's local storage. Edits made in the app will update the Google Sheet in real-time.
+          </div>
+
+          {/* ── AI Assistant Section ── */}
+          <div className="settings-divider" />
+
+          <div className="settings-section-title">✨ AI Assistant (Google Gemini)</div>
+
+          <div className="settings-field">
+            <label className="settings-label">Gemini API Key</label>
+            <div className="settings-key-wrap">
+              <input
+                className="settings-input"
+                type={showKey ? "text" : "password"}
+                placeholder="AIza…"
+                value={aiKey}
+                onChange={(e) => setAiKeyLocal(e.target.value)}
+                id="settings-ai-key-input"
+                autoComplete="off"
+              />
+              <button
+                className="settings-show-key"
+                type="button"
+                onClick={() => setShowKey((v) => !v)}
+                aria-label={showKey ? "Hide key" : "Show key"}
+              >
+                {showKey ? "🙈" : "👁️"}
+              </button>
+            </div>
+          </div>
+
+          <div className="settings-note">
+            🔑 Get a free API key at{" "}
+            <a
+              href="https://aistudio.google.com/app/apikey"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="settings-link"
+            >
+              aistudio.google.com
+            </a>. Your key is stored locally and never sent to any server other than Google.
           </div>
         </div>
 

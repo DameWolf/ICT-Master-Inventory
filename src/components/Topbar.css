@@ -225,6 +225,31 @@
   text-align: center;
 }
 
+[data-theme="dark"] .nav-dropdown-panel {
+  background: #1a0810;
+  border-color: rgba(212, 175, 55, 0.4);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .ndp-arrow {
+  background: #1a0810;
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+[data-theme="dark"] .ndp-item:hover {
+  background: rgba(255, 215, 0, 0.12);
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+[data-theme="dark"] .ndp-cat-name {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .ndp-cat-count {
+  background: rgba(255, 215, 0, 0.15);
+  color: #ffd700;
+}
+
 /* ── Right Side ── */
 .topbar-right {
   display: flex;

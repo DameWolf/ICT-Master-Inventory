@@ -172,3 +172,51 @@
   transition: all 0.18s ease;
 }
 .btn-save-settings:hover { transform: translateY(-1px); color: #ffd700; }
+
+/* ── AI Section Additions ── */
+.settings-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #d4af37, transparent);
+  margin: 4px 0;
+}
+
+.settings-section-title {
+  font-family: var(--font-heading, 'Outfit', sans-serif);
+  font-size: 13px;
+  font-weight: 800;
+  color: #800020;
+  letter-spacing: 0.3px;
+}
+
+.settings-key-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.settings-key-wrap .settings-input {
+  padding-right: 42px;
+}
+
+.settings-show-key {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 0;
+  line-height: 1;
+  color: #7a5866;
+  transition: opacity 0.15s;
+}
+
+.settings-show-key:hover { opacity: 0.7; }
+
+.settings-link {
+  color: #800020;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.settings-link:hover { color: #9E1B32; }

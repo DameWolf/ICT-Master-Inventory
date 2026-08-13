@@ -6,6 +6,7 @@ import InventoryTable from "./components/InventoryTable";
 import SettingsModal from "./components/SettingsModal";
 import QRScanner from "./components/QRScanner";
 import Toast from "./components/Toast";
+import AIChat from "./components/AIChat";
 import { useSheetInventory } from "./hooks/useSheetInventory";
 import "./App.css";
 
@@ -108,7 +109,7 @@ function App() {
         activeView={view}
       />
 
-      <main className="app-content">
+      <main className={`app-content${view === "home" ? " app-content--home" : ""}`}>
         {view === "home" ? (
           <HomePage
             inventory={inventory}
@@ -124,6 +125,7 @@ function App() {
             inventory={inventory}
             onSelectCategory={handleSelectCategory}
             onViewAll={handleViewAllTable}
+            darkMode={darkMode}
           />
         ) : (
           <InventoryTable
@@ -147,6 +149,11 @@ function App() {
           onFindInInventory={handleFindFromQR}
         />
       )}
+
+      <AIChat
+        inventory={inventory}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
 
       <Toast toasts={toasts} onDismiss={dismissToast} />
     </div>

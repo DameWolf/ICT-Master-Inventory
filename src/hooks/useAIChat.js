@@ -156,46 +156,52 @@ export function useAIChat() {
       timestamp: new Date(),
     };
 
+    // Snapshot current messages BEFORE adding the new user message
     setMessages((prev) => [...prev, userMsg]);
     setIsLoading(true);
     setError(null);
     abortRef.current = false;
 
     try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
       const context = buildInventoryContext(inventory);
       const systemPrompt = SYSTEM_PROMPT(context);
 
-      // Build history for multi-turn (exclude last user message, already appended)
+      const genAI = new GoogleGenerativeAI(apiKey);
+
+      // systemInstruction MUST go in getGenerativeModel, not startChat
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.0-flash",
+        systemInstruction: systemPrompt,
+      });
+
+      // Build chat history from existing messages only (NOT the current user message)
+      // messages here is the snapshot before setState ran, so it's correct
       const history = messages.map((m) => ({
         role: m.role === "user" ? "user" : "model",
-        parts: [{ text: m.content }],
+        parts: [{ text: m.content || " " }],
       }));
 
       const chat = model.startChat({
         history,
-        systemInstruction: systemPrompt,
         generationConfig: {
           maxOutputTokens: 1024,
           temperature: 0.4,
         },
       });
 
-      // Stream the response
-      const result = await chat.sendMessageStream(userText);
-
-      let fullText = "";
+      // Add optimistic AI message placeholder
       const aiMsg = {
         role: "assistant",
         content: "",
         timestamp: new Date(),
         streaming: true,
       };
-
       setMessages((prev) => [...prev, aiMsg]);
 
+      // Stream the response
+      const result = await chat.sendMessageStream(userText);
+
+      let fullText = "";
       for await (const chunk of result.stream) {
         if (abortRef.current) break;
         const chunkText = chunk.text();
@@ -214,11 +220,20 @@ export function useAIChat() {
         )
       );
     } catch (err) {
-      const errText = err?.message || "Failed to get a response.";
-      const isKeyError = errText.includes("API_KEY") || errText.includes("401") || errText.includes("403");
+      const errText = err?.message || "";
+      const isKeyError =
+        errText.includes("API_KEY") ||
+        errText.includes("API key") ||
+        errText.includes("401") ||
+        errText.includes("403");
       setError(isKeyError ? "bad_key" : "api_error");
-      // Remove the optimistic user message on hard failure
-      setMessages((prev) => prev.filter((_, i) => i !== prev.length - 1));
+      // Remove the optimistic AI placeholder if it was added, keep the user message
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        return last?.role === "assistant" && last?.streaming
+          ? prev.slice(0, -1)
+          : prev;
+      });
     } finally {
       setIsLoading(false);
     }

@@ -355,6 +355,30 @@
 }
 .topbar-sync-btn:hover { opacity: 1; transform: rotate(30deg); }
 
+.topbar-pm-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  background: rgba(37,99,235,0.2);
+  border: 1px solid rgba(147,197,253,0.5);
+  border-radius: 10px;
+  color: #bfdbfe;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  font-family: var(--font-heading, 'Outfit', sans-serif);
+}
+.topbar-pm-btn:hover {
+  background: rgba(37,99,235,0.35);
+  border-color: #93c5fd;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+}
+
 .settings-btn {
   background: rgba(255,255,255,0.1);
   border: 1px solid rgba(212, 175, 55, 0.3);

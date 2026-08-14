@@ -170,7 +170,7 @@ export function useAIChat() {
 
       // systemInstruction MUST go in getGenerativeModel, not startChat
       const model = genAI.getGenerativeModel({
-        model: "gemini-2.0-flash",
+        model: "gemini-flash-latest",
         systemInstruction: systemPrompt,
       });
 

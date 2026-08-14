@@ -348,6 +348,10 @@ export default function PMChecklist({ inventory, onClose }) {
     }
   }, [checklistData, selectedTarget]);
 
+  const handlePrint = useCallback(() => {
+    window.print();
+  }, []);
+
   return (
     <div className="pm-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="pm-modal">
@@ -492,8 +496,15 @@ export default function PMChecklist({ inventory, onClose }) {
             {/* Error */}
             {genError && <div className="pm-gen-error">{genError}</div>}
 
-            {/* Download Buttons */}
+            {/* Download & Print Buttons */}
             <div className="pm-download-buttons">
+              <button
+                className="pm-btn pm-btn--print"
+                onClick={handlePrint}
+                disabled={!checklistData}
+              >
+                🖨️ Print Report
+              </button>
               <button
                 className="pm-btn pm-btn--pdf"
                 onClick={handleDownloadPDF}

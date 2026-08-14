@@ -1,11 +1,11 @@
 /**
  * pmChecklistPDF.js
  * ─────────────────────────────────────────────────────────
- * Renders the PM Checklist HTML preview to a full-bleed PDF
- * using html2canvas + jsPDF.
+ * Renders the exact PM Checklist HTML preview to a PDF using
+ * html2canvas + jsPDF.
  *
- * The content always fills the FULL usable page width.
- * Supports Letter (8.5×11 in) and A4 (210×297 mm).
+ * Guaranteed 100% full-width printing without horizontal squeezing.
+ * Automatically spans multiple pages if content height exceeds one page.
  */
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -25,11 +25,11 @@ export async function downloadPDF(elementId, fileName = "PM_Checklist", paperSiz
   if (!element) throw new Error("Preview element not found");
 
   const size   = PAPER_SIZES[paperSize] || PAPER_SIZES.letter;
-  const margin = 8;                     // mm — equal on all sides
-  const usableW = size.w - margin * 2;  // mm available horizontally
-  const usableH = size.h - margin * 2;  // mm available vertically
+  const margin = 8;                     // mm margin on left/right/top/bottom
+  const usableW = size.w - margin * 2;  // full printable width in mm
+  const usableH = size.h - margin * 2;  // full printable height in mm per page
 
-  // ── Capture at 3× for crisp print quality ──────────────
+  // ── Capture canvas at high resolution ──────────────────
   const canvas = await html2canvas(element, {
     scale:           3,
     useCORS:         true,
@@ -43,31 +43,34 @@ export async function downloadPDF(elementId, fileName = "PM_Checklist", paperSiz
   });
 
   const imgData = canvas.toDataURL("image/png");
-  const imgW    = canvas.width;    // canvas px
-  const imgH    = canvas.height;   // canvas px
-  const aspect  = imgH / imgW;     // height-to-width ratio
+  const imgW    = canvas.width;
+  const imgH    = canvas.height;
+  const aspect  = imgH / imgW;
 
-  // ── Always fill full usable width ──────────────────────
-  let printW = usableW;
-  let printH = usableW * aspect;
+  // ── Always stretch to fill usable page width (never squeeze) ──
+  const printW = usableW;
+  const printH = usableW * aspect; // total height in mm
 
-  // If taller than one page, scale down to fit height too
-  if (printH > usableH) {
-    printH = usableH;
-    printW = usableH / aspect;
-  }
-
-  // Centre horizontally if narrower than usable area
-  const xOff = margin + (usableW - printW) / 2;
-  const yOff = margin;
-
-  // ── Build PDF ───────────────────────────────────────────
   const pdf = new jsPDF({
     orientation: "portrait",
     unit:        "mm",
     format:      [size.w, size.h],
   });
 
-  pdf.addImage(imgData, "PNG", xOff, yOff, printW, printH);
+  let heightLeft = printH;
+  let position   = margin;
+
+  // Render Page 1
+  pdf.addImage(imgData, "PNG", margin, position, printW, printH);
+  heightLeft -= usableH;
+
+  // If content is longer than 1 page, append additional pages seamlessly
+  while (heightLeft > 0) {
+    position = margin - (printH - heightLeft);
+    pdf.addPage([size.w, size.h], "portrait");
+    pdf.addImage(imgData, "PNG", margin, position, printW, printH);
+    heightLeft -= usableH;
+  }
+
   pdf.save(`${fileName}.pdf`);
 }

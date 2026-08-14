@@ -7,6 +7,7 @@ import SettingsModal from "./components/SettingsModal";
 import QRScanner from "./components/QRScanner";
 import Toast from "./components/Toast";
 import AIChat from "./components/AIChat";
+import PMChecklist from "./components/PMChecklist";
 import { useSheetInventory } from "./hooks/useSheetInventory";
 import "./App.css";
 
@@ -39,6 +40,8 @@ function App() {
   const [settingsOpen, setSettingsOpen]     = useState(false);
   const [scannerOpen, setScannerOpen]       = useState(false);
   const [toasts, setToasts]                 = useState([]);
+
+  const [pmChecklistOpen, setPMChecklistOpen] = useState(false);
 
   // Dark Mode state initialized from localStorage
   const [darkMode, setDarkMode] = useState(() => {
@@ -101,6 +104,7 @@ function App() {
         onDashboard={handleDashboard}
         onSettings={() => setSettingsOpen(true)}
         onScannerOpen={() => setScannerOpen(true)}
+        onOpenPMChecklist={() => setPMChecklistOpen(true)}
         inventory={inventory}
         lastSynced={lastSynced}
         onSync={refetch}
@@ -140,6 +144,13 @@ function App() {
       </main>
 
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+
+      {pmChecklistOpen && (
+        <PMChecklist
+          inventory={inventory}
+          onClose={() => setPMChecklistOpen(false)}
+        />
+      )}
 
       {/* QR Scanner Modal */}
       {scannerOpen && (

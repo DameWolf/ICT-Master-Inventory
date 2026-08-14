@@ -85,7 +85,7 @@ function DropdownMenu({ group, selectedCategory, onSelectCategory, inventory, is
 
 
 export default function Topbar({
-  selectedCategory, onSelectCategory, onHome, onDashboard, onSettings, onScannerOpen,
+  selectedCategory, onSelectCategory, onHome, onDashboard, onSettings, onScannerOpen, onOpenPMChecklist,
   inventory = [], lastSynced, onSync, darkMode, onToggleDarkMode, activeView,
 }) {
   const [openGroup, setOpenGroup] = useState(null);
@@ -172,6 +172,18 @@ export default function Topbar({
             </button>
           )}
         </div>
+
+        {/* PM Report button */}
+        {onOpenPMChecklist && (
+          <button
+            className="topbar-pm-btn"
+            onClick={onOpenPMChecklist}
+            id="btn-pm-report"
+            title="Generate Preventive Maintenance Checklist"
+          >
+            📋 <span className="scanner-btn-label">PM Report</span>
+          </button>
+        )}
 
         {/* QR Scanner button */}
         {onScannerOpen && (

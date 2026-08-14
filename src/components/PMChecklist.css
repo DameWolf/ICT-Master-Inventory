@@ -734,6 +734,13 @@
 
 /* ── Print Media ── */
 @media print {
+  html, body, .pm-modal-overlay, .pm-modal, .pm-modal-body, .pm-preview-pane, .pm-controls {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
   body * {
     visibility: hidden !important;
   }
@@ -760,9 +767,11 @@
   }
 
   .pm-footer {
-    position: absolute !important;
-    bottom: 0 !important;
-    right: 0 !important;
+    position: relative !important;
+    bottom: auto !important;
+    right: auto !important;
+    float: right !important;
+    margin-top: 10px !important;
   }
 
   @page {

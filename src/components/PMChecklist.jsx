@@ -7,7 +7,7 @@ import {
 } from "../utils/pmChecklistData";
 import { downloadPDF, PAPER_SIZES } from "../utils/pmChecklistPDF";
 import { downloadWord } from "../utils/pmChecklistWord";
-import logoImg from "../assets/logo.jpg";
+import shieldLogo from "../assets/ldcu-shield.png";
 import "./PMChecklist.css";
 
 const PREVIEW_ID = "pm-checklist-preview";
@@ -37,7 +37,7 @@ function ChecklistPreview({ data }) {
       {/* ── Header ── */}
       <div className="pm-header">
         <div className="pm-logo-block">
-          <img src={logoImg} alt="LDCU Logo" className="pm-logo-img" />
+          <img src={shieldLogo} alt="LDCU Shield" className="pm-logo-img" />
         </div>
         <div className="pm-header-text">
           <div className="pm-uni-name">LICEO DE CAGAYAN UNIVERSITY</div>
@@ -48,9 +48,6 @@ function ChecklistPreview({ data }) {
 
       <div className="pm-divider pm-divider--thick" />
 
-      <div className="pm-office-title">
-        OFFICE OF THE VICE PRESIDENT FOR INFORMATION AND COMMUNICATION TECHNOLOGY
-      </div>
       <div className="pm-office-title">ICT – INFRASTRUCTURE OPERATIONS UNIT</div>
       <div className="pm-form-title">SY 2025-2026 PREVENTIVE MAINTENANCE CHECKLIST</div>
 

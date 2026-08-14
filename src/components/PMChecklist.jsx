@@ -7,6 +7,7 @@ import {
 } from "../utils/pmChecklistData";
 import { downloadPDF, PAPER_SIZES } from "../utils/pmChecklistPDF";
 import { downloadWord } from "../utils/pmChecklistWord";
+import logoImg from "../assets/logo.jpg";
 import "./PMChecklist.css";
 
 const PREVIEW_ID = "pm-checklist-preview";
@@ -36,7 +37,7 @@ function ChecklistPreview({ data }) {
       {/* ── Header ── */}
       <div className="pm-header">
         <div className="pm-logo-block">
-          <div className="pm-logo-circle">LDCU</div>
+          <img src={logoImg} alt="LDCU Logo" className="pm-logo-img" />
         </div>
         <div className="pm-header-text">
           <div className="pm-uni-name">LICEO DE CAGAYAN UNIVERSITY</div>

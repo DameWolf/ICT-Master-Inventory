@@ -193,7 +193,12 @@ export default function AIChat({ inventory, onOpenSettings }) {
               </div>
               <div>
                 <div className="ai-header-title">ICT Inventory AI</div>
-                <div className="ai-header-sub">Powered by Google Gemini</div>
+                <div className="ai-header-sub">
+                  Powered by Google Gemini
+                  {messages.length > 0 && (
+                    <span className="ai-memory-badge">🧠 {messages.length} msgs remembered</span>
+                  )}
+                </div>
               </div>
             </div>
             <div className="ai-header-actions">
@@ -201,8 +206,8 @@ export default function AIChat({ inventory, onOpenSettings }) {
                 <button
                   className="ai-icon-btn"
                   onClick={clearChat}
-                  title="Clear chat"
-                  aria-label="Clear conversation"
+                  title="Clear memory (delete all chat history)"
+                  aria-label="Clear memory"
                 >
                   🗑️
                 </button>

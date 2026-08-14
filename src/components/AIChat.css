@@ -208,6 +208,26 @@
 
 [data-theme="dark"] .ai-header-sub { color: rgba(255,255,255,0.5); }
 
+.ai-memory-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  background: rgba(128, 0, 32, 0.1);
+  border: 1px solid rgba(128, 0, 32, 0.25);
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #800020;
+  vertical-align: middle;
+  line-height: 1.6;
+}
+
+[data-theme="dark"] .ai-memory-badge {
+  background: rgba(255, 215, 0, 0.1);
+  border-color: rgba(255, 215, 0, 0.3);
+  color: #ffd700;
+}
+
 .ai-header-actions {
   display: flex;
   gap: 4px;

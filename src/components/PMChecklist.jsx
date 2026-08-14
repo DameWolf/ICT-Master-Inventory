@@ -5,7 +5,7 @@ import {
   buildChecklistData, generateOverallRemarks,
   TEMPLATE_ROWS,
 } from "../utils/pmChecklistData";
-import { downloadPDF } from "../utils/pmChecklistPDF";
+import { downloadPDF, PAPER_SIZES } from "../utils/pmChecklistPDF";
 import { downloadWord } from "../utils/pmChecklistWord";
 import "./PMChecklist.css";
 
@@ -260,6 +260,7 @@ export default function PMChecklist({ inventory, onClose }) {
 
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError]     = useState("");
+  const [paperSize, setPaperSize]   = useState("letter"); // "letter" | "a4"
 
   // ── Autocomplete suggestions ──────────────────────────
   const allUsers = useMemo(() => getAllUsers(inventory), [inventory]);
@@ -325,13 +326,13 @@ export default function PMChecklist({ inventory, onClose }) {
     setGenError("");
     try {
       const name = selectedTarget ? selectedTarget.replace(/[^a-z0-9]/gi, "_") : "PM_Checklist";
-      await downloadPDF(PREVIEW_ID, `PM_Checklist_${name}`);
+      await downloadPDF(PREVIEW_ID, `PM_Checklist_${name}`, paperSize);
     } catch (e) {
       setGenError("PDF generation failed: " + e.message);
     } finally {
       setGenerating(false);
     }
-  }, [selectedTarget]);
+  }, [selectedTarget, paperSize]);
 
   const handleDownloadWord = useCallback(async () => {
     if (!checklistData) return;
@@ -381,6 +382,21 @@ export default function PMChecklist({ inventory, onClose }) {
               >
                 🏢 By Department
               </button>
+            </div>
+
+            {/* Paper size */}
+            <div className="pm-form-section">
+              <div className="pm-form-label">Paper Size</div>
+              <div className="pm-radio-group">
+                {Object.entries(PAPER_SIZES).map(([key, val]) => (
+                  <label key={key} className="pm-radio-label">
+                    <input type="radio" name="paperSize" value={key}
+                      checked={paperSize === key}
+                      onChange={() => setPaperSize(key)} />
+                    {val.label}
+                  </label>
+                ))}
+              </div>
             </div>
 
             {/* Search box */}

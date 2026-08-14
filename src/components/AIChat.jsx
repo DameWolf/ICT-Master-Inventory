@@ -193,7 +193,7 @@ export default function AIChat({ inventory, onOpenSettings }) {
               </div>
               <div>
                 <div className="ai-header-title">ICT Inventory AI</div>
-                <div className="ai-header-sub">Powered by Gemini 2.0 Flash</div>
+                <div className="ai-header-sub">Powered by Google Gemini</div>
               </div>
             </div>
             <div className="ai-header-actions">

@@ -2,59 +2,122 @@
    AI CHAT — Premium Glassmorphism Panel  •  Maroon + Gold
 ══════════════════════════════════════════════════════ */
 
-/* ── Floating Action Button ── */
-.ai-fab {
+/* ── Floating Avatar Button (Bigger 64px, Draggable & Interactive) ── */
+.ai-avatar-fab {
   position: fixed;
   bottom: 28px;
   right: 28px;
   z-index: 4000;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  background: linear-gradient(135deg, #800020 0%, #9E1B32 50%, #6b0019 100%);
+  border: 2.5px solid #ffd700;
+  border-radius: 50%;
+  cursor: grab;
+  box-shadow:
+    0 8px 28px rgba(128, 0, 32, 0.5),
+    0 0 15px rgba(255, 215, 0, 0.35);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  animation: avatarFloat 4s ease-in-out infinite;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: linear-gradient(135deg, #800020, #9E1B32);
-  border: 1.5px solid #ffd700;
-  border-radius: 50px;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow:
-    0 4px 24px rgba(128, 0, 32, 0.45),
-    0 0 0 0 rgba(255, 215, 0, 0.4);
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  font-family: var(--font-heading, 'Outfit', sans-serif);
-  animation: fabPulse 3s ease-in-out infinite;
+  justify-content: center;
+  outline: none;
 }
 
-@keyframes fabPulse {
-  0%, 100% { box-shadow: 0 4px 24px rgba(128, 0, 32, 0.45), 0 0 0 0 rgba(255, 215, 0, 0.5); }
-  50%       { box-shadow: 0 4px 24px rgba(128, 0, 32, 0.55), 0 0 0 8px rgba(255, 215, 0, 0); }
+/* Gentle floating breathing animation */
+@keyframes avatarFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%       { transform: translateY(-8px) rotate(2deg); }
 }
 
-.ai-fab:hover {
-  transform: translateY(-3px) scale(1.04);
-  box-shadow: 0 8px 32px rgba(128, 0, 32, 0.55), 0 0 20px rgba(255, 215, 0, 0.25);
-  color: #ffd700;
-  animation: none;
-}
-
-.ai-fab--open {
-  padding: 12px 16px;
+/* Glowing golden aura ring */
+.ai-avatar-glow-ring {
+  position: absolute;
+  inset: -6px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #5a0016, #800020);
-  animation: none;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.4) 0%, transparent 70%);
+  opacity: 0.6;
+  pointer-events: none;
+  animation: auraPulse 2.5s ease-in-out infinite alternate;
 }
 
-.ai-fab--dragging {
+@keyframes auraPulse {
+  0%   { transform: scale(0.9); opacity: 0.4; }
+  100% { transform: scale(1.15); opacity: 0.85; }
+}
+
+/* Avatar Image Container */
+.ai-avatar-img-wrap {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  pointer-events: none;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Interactive Fun Actions: Hover, Drag, Open ── */
+
+/* Hover: Wiggle & Glow */
+.ai-avatar-fab:hover:not(.ai-avatar-fab--dragging) {
+  animation: avatarWiggle 0.5s ease-in-out infinite alternate;
+  box-shadow:
+    0 12px 36px rgba(128, 0, 32, 0.65),
+    0 0 25px rgba(255, 215, 0, 0.6);
+  border-color: #ffffff;
+}
+
+.ai-avatar-fab:hover:not(.ai-avatar-fab--dragging) .ai-avatar-img {
+  transform: scale(1.1);
+}
+
+@keyframes avatarWiggle {
+  0%   { transform: translateY(-3px) rotate(-6deg) scale(1.08); }
+  100% { transform: translateY(-5px) rotate(6deg) scale(1.08); }
+}
+
+/* Dragging: Cute Squish & Stretch Dynamic */
+.ai-avatar-fab--dragging {
   animation: none !important;
   transition: none !important;
-  opacity: 0.92;
-  box-shadow: 0 12px 40px rgba(128, 0, 32, 0.6), 0 0 24px rgba(255, 215, 0, 0.4) !important;
+  cursor: grabbing !important;
+  transform: scale(1.16, 0.92) rotate(-5deg) !important;
+  box-shadow: 0 16px 48px rgba(128, 0, 32, 0.7), 0 0 30px rgba(255, 215, 0, 0.7) !important;
 }
 
-.ai-fab-icon {
-  font-size: 16px;
+.ai-avatar-fab--dragging .ai-avatar-glow-ring {
+  opacity: 1;
+  transform: scale(1.25);
+}
+
+/* Open mode: Close icon flip */
+.ai-avatar-fab--open {
+  background: linear-gradient(135deg, #5a0016, #800020);
+  border-color: #ffd700;
+  animation: avatarSpin 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes avatarSpin {
+  from { transform: rotate(0deg) scale(0.8); }
+  to   { transform: rotate(360deg) scale(1); }
+}
+
+.ai-avatar-close-icon {
+  color: #ffd700;
+  font-size: 22px;
+  font-weight: 900;
   line-height: 1;
 }
 

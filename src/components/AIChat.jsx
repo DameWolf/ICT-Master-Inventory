@@ -275,22 +275,24 @@ export default function AIChat({ inventory, onOpenSettings }) {
 
   return (
     <>
-      {/* Floating Chat Button (Draggable) */}
+      {/* Floating Avatar Button (Draggable & Animated) */}
       <button
         ref={fabRef}
         style={fabStyle}
         onPointerDown={handlePointerDown}
-        className={`ai-fab ${open ? "ai-fab--open" : ""} ${isDragging ? "ai-fab--dragging" : ""}`}
+        className={`ai-avatar-fab ${open ? "ai-avatar-fab--open" : ""} ${isDragging ? "ai-avatar-fab--dragging" : ""}`}
         aria-label={open ? "Close AI Assistant" : "Open AI Assistant"}
         id="ai-chat-fab"
-        title="Drag anywhere to move • Click to open"
+        title="🤖 Drag me anywhere • Click to Ask AI!"
       >
-        {open ? (
-          <span className="ai-fab-icon">✕</span>
-        ) : (
-          <img src={aiRobotIcon} alt="AI" className="ai-fab-robot-icon" draggable={false} />
-        )}
-        {!open && <span className="ai-fab-label">Ask AI</span>}
+        <div className="ai-avatar-glow-ring" />
+        <div className="ai-avatar-img-wrap">
+          {open ? (
+            <span className="ai-avatar-close-icon">✕</span>
+          ) : (
+            <img src={aiRobotIcon} alt="AI Assistant" className="ai-avatar-img" draggable={false} />
+          )}
+        </div>
         {!open && messages.length > 0 && (
           <span className="ai-fab-badge">{messages.filter((m) => m.role === "assistant").length}</span>
         )}

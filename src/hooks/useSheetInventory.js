@@ -380,7 +380,7 @@ export function parseSheetCSV(csvText, tabName, startId = 1) {
   let idCounter = startId;
 
   return dataRows
-    .map((line) => {
+    .map((line, lineIndex) => {
       const cols = parseCSVRow(line);
       const deviceType = cols[0] || "";
 
@@ -393,6 +393,10 @@ export function parseSheetCSV(csvText, tabName, startId = 1) {
 
       return {
         id: currentId,
+        // sheetRow: actual 1-based row in THIS tab's Google Sheet
+        // lineIndex 0 = data row 2 (row 1 is the header)
+        sheetRow:     lineIndex + 2,
+        sheetTab:     tabName,
         category:     tabName,
         tabCategory:  tabName,
         name:         fields.deviceType,

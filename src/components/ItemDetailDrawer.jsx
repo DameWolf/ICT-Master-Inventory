@@ -148,14 +148,18 @@ export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelet
     onLocalUpdate(item.id, editValues);             // optimistic update
 
     const appsScriptUrl = getAppsScriptUrl();
-    const sheetRowIndex = item.id + 1;              // +1 because header is row 1
+    // Use the actual row number within the item's specific sheet tab.
+    // item.sheetRow is the true 1-based Google Sheets row (header = row 1).
+    // item.sheetTab is the tab name (e.g. "Computing Devices").
+    const sheetRowIndex = item.sheetRow;
+    const tabName       = item.sheetTab || item.tabCategory || item.category;
 
     try {
       if (!appsScriptUrl) {
         onAddToast({ type: "info", message: "Local update saved. Open ⚙️ Settings to enable Google Sheets sync." });
       } else {
         onAddToast({ type: "loading", message: "Saving to Google Sheets…", duration: 8000 });
-        await updateSheetRow(appsScriptUrl, sheetRowIndex, updatedItem);
+        await updateSheetRow(appsScriptUrl, sheetRowIndex, updatedItem, tabName);
         onAddToast({ type: "success", message: "✅ Google Sheets updated successfully!" });
       }
       setIsEditing(false);

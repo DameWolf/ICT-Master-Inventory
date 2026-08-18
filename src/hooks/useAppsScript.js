@@ -19,12 +19,13 @@ export function setAppsScriptUrl(url) {
  * @param {number} sheetRowIndex - 1-based sheet row (header = 1, first data = 2)
  * @param {object} itemData      - the full updated item object
  */
-export async function updateSheetRow(appsScriptUrl, sheetRowIndex, itemData) {
+export async function updateSheetRow(appsScriptUrl, sheetRowIndex, itemData, tabName) {
   if (!appsScriptUrl) throw new Error("Apps Script URL not configured. Open ⚙️ Settings to add it.");
 
   const params = new URLSearchParams({
     action: "updateRow",
     rowIndex: String(sheetRowIndex),
+    tabName: tabName || "",
     data: JSON.stringify({
       name:         itemData.name         || "",
       campus:       itemData.campus        || "",

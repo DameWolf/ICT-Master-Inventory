@@ -100,16 +100,34 @@ function NoKeyScreen({ onOpenSettings }) {
   );
 }
 
+const FAB_POS_KEY = "ict_ai_fab_pos";
+
+function getStoredFabPos() {
+  try {
+    const data = localStorage.getItem(FAB_POS_KEY);
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+        return parsed;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
 export default function AIChat({ inventory, onOpenSettings }) {
   const [open, setOpen] = useState(false);
   const [inputVal, setInputVal] = useState("");
   const [hasKey, setHasKey] = useState(() => Boolean(getAIKey()));
+  const [fabPos, setFabPos] = useState(getStoredFabPos);
+  const [isDragging, setIsDragging] = useState(false);
   const { messages, isLoading, error, setError, sendMessage, clearChat, stopGeneration } =
     useAIChat();
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const panelRef = useRef(null);
+  const fabRef = useRef(null);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -134,6 +152,62 @@ export default function AIChat({ inventory, onOpenSettings }) {
       else if (error === "no_key") setError(null);
     }
   }, [open]);
+
+  // Handle dragging the Ask AI button anywhere on screen
+  const handlePointerDown = (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    const btn = fabRef.current;
+    if (!btn) return;
+
+    const rect = btn.getBoundingClientRect();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const initialLeft = rect.left;
+    const initialTop = rect.top;
+    let hasMoved = false;
+
+    const onPointerMove = (moveEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+
+      if (!hasMoved && Math.hypot(dx, dy) > 4) {
+        hasMoved = true;
+        setIsDragging(true);
+      }
+
+      if (hasMoved) {
+        let newX = initialLeft + dx;
+        let newY = initialTop + dy;
+
+        const maxX = window.innerWidth - rect.width - 10;
+        const maxY = window.innerHeight - rect.height - 10;
+        newX = Math.max(10, Math.min(newX, maxX));
+        newY = Math.max(10, Math.min(newY, maxY));
+
+        setFabPos({ x: newX, y: newY });
+      }
+    };
+
+    const onPointerUp = () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+
+      if (hasMoved) {
+        setTimeout(() => setIsDragging(false), 50);
+        if (fabRef.current) {
+          const finalRect = fabRef.current.getBoundingClientRect();
+          const finalPos = { x: finalRect.left, y: finalRect.top };
+          setFabPos(finalPos);
+          localStorage.setItem(FAB_POS_KEY, JSON.stringify(finalPos));
+        }
+      } else {
+        setOpen((v) => !v);
+      }
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+  };
 
   const handleSend = useCallback(async () => {
     const text = inputVal.trim();
@@ -161,20 +235,60 @@ export default function AIChat({ inventory, onOpenSettings }) {
 
   const showSuggestions = messages.length === 0 && hasKey;
 
+  // Compute inline styles for button and panel position
+  const fabStyle = fabPos
+    ? {
+        left: `${fabPos.x}px`,
+        top: `${fabPos.y}px`,
+        bottom: "auto",
+        right: "auto",
+        cursor: isDragging ? "grabbing" : "grab",
+        userSelect: "none",
+        touchAction: "none",
+      }
+    : { cursor: isDragging ? "grabbing" : "grab", userSelect: "none", touchAction: "none" };
+
+  const getPanelStyle = () => {
+    if (!fabPos || !fabRef.current) return {};
+    const rect = fabRef.current.getBoundingClientRect();
+    const isBottomHalf = fabPos.y > window.innerHeight / 2;
+    const isRightHalf = fabPos.x > window.innerWidth / 2;
+
+    const style = {};
+    if (isBottomHalf) {
+      style.bottom = `${window.innerHeight - fabPos.y + 12}px`;
+      style.top = "auto";
+    } else {
+      style.top = `${fabPos.y + rect.height + 12}px`;
+      style.bottom = "auto";
+    }
+
+    if (isRightHalf) {
+      style.right = `${window.innerWidth - fabPos.x - rect.width}px`;
+      style.left = "auto";
+    } else {
+      style.left = `${fabPos.x}px`;
+      style.right = "auto";
+    }
+    return style;
+  };
+
   return (
     <>
-      {/* Floating Chat Button */}
+      {/* Floating Chat Button (Draggable) */}
       <button
-        className={`ai-fab ${open ? "ai-fab--open" : ""}`}
-        onClick={() => setOpen((v) => !v)}
+        ref={fabRef}
+        style={fabStyle}
+        onPointerDown={handlePointerDown}
+        className={`ai-fab ${open ? "ai-fab--open" : ""} ${isDragging ? "ai-fab--dragging" : ""}`}
         aria-label={open ? "Close AI Assistant" : "Open AI Assistant"}
         id="ai-chat-fab"
-        title="AI Inventory Assistant"
+        title="Drag anywhere to move • Click to open"
       >
         {open ? (
           <span className="ai-fab-icon">✕</span>
         ) : (
-          <img src={aiRobotIcon} alt="AI" className="ai-fab-robot-icon" />
+          <img src={aiRobotIcon} alt="AI" className="ai-fab-robot-icon" draggable={false} />
         )}
         {!open && <span className="ai-fab-label">Ask AI</span>}
         {!open && messages.length > 0 && (
@@ -184,7 +298,7 @@ export default function AIChat({ inventory, onOpenSettings }) {
 
       {/* Chat Panel */}
       {open && (
-        <div className="ai-panel" ref={panelRef} role="dialog" aria-label="AI Inventory Assistant">
+        <div className="ai-panel" style={getPanelStyle()} ref={panelRef} role="dialog" aria-label="AI Inventory Assistant">
           {/* Header */}
           <div className="ai-panel-header">
             <div className="ai-header-left">

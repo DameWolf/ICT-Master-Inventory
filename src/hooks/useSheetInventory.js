@@ -439,6 +439,25 @@ async function fetchTabCSV(gid) {
   return "";
 }
 
+const LOCAL_EDITS_KEY   = "ict_local_edits";
+const LOCAL_ADDS_KEY    = "ict_local_adds";
+const LOCAL_DELETES_KEY = "ict_local_deletes";
+
+function getStoredJSON(key, fallback) {
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function setStoredJSON(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (_) {}
+}
+
 export function useSheetInventory() {
   const [inventory, setInventory]   = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -467,7 +486,25 @@ export function useSheetInventory() {
 
       if (combined.length === 0) throw new Error("No data returned from Google Sheets.");
 
-      setInventory(combined);
+      // Retrieve local overrides from localStorage
+      const localEdits   = getStoredJSON(LOCAL_EDITS_KEY, {});
+      const localDeletes = new Set(getStoredJSON(LOCAL_DELETES_KEY, []));
+      const localAdds    = getStoredJSON(LOCAL_ADDS_KEY, []);
+
+      // 1. Filter out deleted items & apply local edits
+      let merged = combined
+        .filter((item) => !localDeletes.has(item.id))
+        .map((item) => {
+          if (localEdits[item.id]) {
+            return { ...item, ...localEdits[item.id] };
+          }
+          return item;
+        });
+
+      // 2. Prepend locally added items
+      merged = [...localAdds, ...merged];
+
+      setInventory(merged);
       setLastSynced(new Date());
     } catch (err) {
       setError(err.message || "Failed to load sheet data.");
@@ -484,17 +521,36 @@ export function useSheetInventory() {
     setInventory((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
     );
+
+    // Save to localStorage persistence
+    const localEdits = getStoredJSON(LOCAL_EDITS_KEY, {});
+    localEdits[id] = { ...(localEdits[id] || {}), ...updates };
+    setStoredJSON(LOCAL_EDITS_KEY, localEdits);
   }, []);
 
   const deleteItem = useCallback((id) => {
     setInventory((prev) => prev.filter((item) => item.id !== id));
+
+    // Save delete to localStorage persistence
+    const localDeletes = getStoredJSON(LOCAL_DELETES_KEY, []);
+    if (!localDeletes.includes(id)) {
+      localDeletes.push(id);
+      setStoredJSON(LOCAL_DELETES_KEY, localDeletes);
+    }
   }, []);
 
   const addItem = useCallback((item) => {
     const newItem = { ...item, id: Date.now(), quantity: 1 };
     setInventory((prev) => [newItem, ...prev]);
+
+    // Save addition to localStorage persistence
+    const localAdds = getStoredJSON(LOCAL_ADDS_KEY, []);
+    localAdds.unshift(newItem);
+    setStoredJSON(LOCAL_ADDS_KEY, localAdds);
+
     return newItem;
   }, []);
 
   return { inventory, loading, error, lastSynced, refetch: fetchSheet, addItem, updateItem, deleteItem };
 }
+

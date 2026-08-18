@@ -364,7 +364,7 @@
 
 .explorer-header {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
   gap: 12px;
@@ -443,7 +443,7 @@
 /* Category Grid & 3D Tilt Cards */
 .home-cat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 12px;
   overflow: hidden;
   align-content: start;

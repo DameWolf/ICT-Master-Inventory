@@ -226,6 +226,9 @@
   cursor: pointer;
   transition: all 0.18s ease;
   white-space: nowrap;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
 }
 
 .campus-pill:hover {
@@ -249,7 +252,7 @@
 }
 
 .status-filter-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 7px;
   padding: 8px 16px;
@@ -258,10 +261,12 @@
   border: 1px solid #e5dcca;
   border-radius: 12px;
   color: #5c3545;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.18s ease;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .status-filter-btn:hover {

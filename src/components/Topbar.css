@@ -9,11 +9,13 @@
   align-items: center;
   gap: 0;
   height: 64px;
-  padding: 0 20px;
+  padding: 0 16px;
   background: linear-gradient(135deg, #6b0019 0%, #800020 40%, #9E1B32 100%);
   box-shadow: 0 2px 20px rgba(128, 0, 32, 0.4), 0 1px 0 rgba(212, 175, 55, 0.5);
   border-bottom: 2px solid #d4af37;
   flex-shrink: 0;
+  min-width: 0;
+  overflow: visible;
 }
 
 /* ── Brand ── */
@@ -21,7 +23,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-right: 28px;
+  margin-right: 20px;
   flex-shrink: 0;
   user-select: none;
 }
@@ -68,7 +70,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 8px 12px;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -99,7 +101,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 8px 12px;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -254,9 +256,10 @@
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-left: auto;
   flex-shrink: 0;
+  padding-left: 8px;
 }
 
 /* Dark / Light Mode Switcher */
@@ -300,9 +303,10 @@
 .tms-pill {
   font-size: 11px;
   font-weight: 700;
-  padding: 4px 10px;
+  padding: 5px 10px;
   border-radius: 20px;
   white-space: nowrap;
+  line-height: 1;
 }
 .tms-pill.total { background: rgba(255,255,255,0.15); color: #fff; }
 .tms-pill.ok    { background: rgba(34,197,94,0.25);  color: #86efac; }
@@ -319,7 +323,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 12px;
+  padding: 5px 10px;
   background: rgba(255,255,255,0.12);
   border: 1px solid rgba(212, 175, 55, 0.35);
   border-radius: 20px;
@@ -327,6 +331,7 @@
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
+  line-height: 1;
 }
 
 .topbar-badge-dot {
@@ -359,7 +364,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 13px;
+  padding: 6px 12px;
   background: rgba(37,99,235,0.2);
   border: 1px solid rgba(147,197,253,0.5);
   border-radius: 10px;
@@ -370,6 +375,7 @@
   transition: all 0.18s ease;
   white-space: nowrap;
   font-family: var(--font-heading, 'Outfit', sans-serif);
+  line-height: 1;
 }
 .topbar-pm-btn:hover {
   background: rgba(37,99,235,0.35);
@@ -384,10 +390,14 @@
   border: 1px solid rgba(212, 175, 55, 0.3);
   border-radius: 10px;
   font-size: 16px;
-  padding: 7px 9px;
+  padding: 6px 9px;
   cursor: pointer;
   transition: all 0.18s ease;
   color: rgba(255,255,255,0.85);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .settings-btn:hover {
   background: rgba(255,255,255,0.18);

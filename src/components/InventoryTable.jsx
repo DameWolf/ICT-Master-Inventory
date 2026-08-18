@@ -81,9 +81,20 @@ function ItemCard({ item, onView, onEdit, onDelete }) {
 }
 
 export default function InventoryTable({ inventory, selectedCategory, onUpdate, onDelete, onAdd, onAddToast }) {
-  const [search, setSearch]             = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [campusFilter, setCampusFilter] = useState("All");
+  const [search, setSearchState] = useState(() => {
+    return localStorage.getItem("ict_table_search") || "";
+  });
+  const [statusFilter, setStatusFilterState] = useState(() => {
+    return localStorage.getItem("ict_table_status_filter") || "All";
+  });
+  const [campusFilter, setCampusFilterState] = useState(() => {
+    return localStorage.getItem("ict_table_campus_filter") || "All";
+  });
+  const [currentPage, setCurrentPageState] = useState(() => {
+    const p = parseInt(localStorage.getItem("ict_table_page") || "1", 10);
+    return isNaN(p) || p < 1 ? 1 : p;
+  });
+
   const [sortConfig, setSortConfig]     = useState({ key: "name", dir: "asc" });
   const [modalOpen, setModalOpen]       = useState(false);
   const [editItem, setEditItem]         = useState(null);
@@ -91,9 +102,29 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
   const [drawerItem, setDrawerItem]     = useState(null);
   const [qrItem, setQrItem]             = useState(null);
   const [batchQrOpen, setBatchQrOpen]   = useState(false);
-  const [currentPage, setCurrentPage]  = useState(1);
   const [filtersOpen, setFiltersOpen]  = useState(false);
   const PAGE_SIZE = 15;
+
+  const setSearch = (val) => {
+    setSearchState(val);
+    localStorage.setItem("ict_table_search", val);
+  };
+
+  const setStatusFilter = (val) => {
+    setStatusFilterState(val);
+    localStorage.setItem("ict_table_status_filter", val);
+  };
+
+  const setCampusFilter = (val) => {
+    setCampusFilterState(val);
+    localStorage.setItem("ict_table_campus_filter", val);
+  };
+
+  const setCurrentPage = (val) => {
+    const pageNum = typeof val === "function" ? val(currentPage) : val;
+    setCurrentPageState(pageNum);
+    localStorage.setItem("ict_table_page", String(pageNum));
+  };
 
   const meta = selectedCategory ? getCategoryMeta(selectedCategory) : { color: "#800020", icon: "📦" };
   const catColor = meta.color;

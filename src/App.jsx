@@ -35,13 +35,32 @@ function ErrorScreen({ message, onRetry }) {
 let toastIdCounter = 0;
 
 function App() {
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [view, setView]                     = useState("home"); // "home" | "dashboard" | "table"
+  const [selectedCategory, setSelectedCategoryState] = useState(() => {
+    return localStorage.getItem("ict_selected_category") || null;
+  });
+  const [view, setViewState] = useState(() => {
+    return localStorage.getItem("ict_current_view") || "home";
+  });
   const [settingsOpen, setSettingsOpen]     = useState(false);
   const [scannerOpen, setScannerOpen]       = useState(false);
   const [toasts, setToasts]                 = useState([]);
 
   const [pmChecklistOpen, setPMChecklistOpen] = useState(false);
+
+  // Helper setters that also update localStorage
+  const setView = (newView) => {
+    setViewState(newView);
+    localStorage.setItem("ict_current_view", newView);
+  };
+
+  const setSelectedCategory = (cat) => {
+    setSelectedCategoryState(cat);
+    if (cat) {
+      localStorage.setItem("ict_selected_category", cat);
+    } else {
+      localStorage.removeItem("ict_selected_category");
+    }
+  };
 
   // Dark Mode state initialized from localStorage
   const [darkMode, setDarkMode] = useState(() => {

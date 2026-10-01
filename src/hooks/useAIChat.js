@@ -278,39 +278,21 @@ export function useAIChat() {
       // Build inventory context once per request
       const context = buildInventoryContext(inventory);
       const systemPrompt = SYSTEM_PROMPT(context);
-
       const genAI = new GoogleGenerativeAI(apiKey);
 
-      // Try gemini-2.0-flash / gemini-1.5-flash / fallback to gemini-flash-latest
-      let modelName = "gemini-2.0-flash";
-      let model;
-      try {
-        model = genAI.getGenerativeModel({
-          model: modelName,
-          systemInstruction: systemPrompt,
-        });
-      } catch (_) {
-        modelName = "gemini-flash-latest";
-        model = genAI.getGenerativeModel({
-          model: modelName,
-          systemInstruction: systemPrompt,
-        });
-      }
+      // Models to try in order of preference & compatibility
+      const CANDIDATE_MODELS = [
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-flash-latest",
+        "gemini-2.0-flash-exp",
+      ];
 
-      // Send only the last MAX_API_HISTORY messages to the API
       const recentMessages = prevMessages.slice(-MAX_API_HISTORY);
       const history = recentMessages.map((m) => ({
         role: m.role === "user" ? "user" : "model",
         parts: [{ text: m.content || " " }],
       }));
-
-      const chat = model.startChat({
-        history,
-        generationConfig: {
-          maxOutputTokens: 2048,
-          temperature: 0.2, // Lower temperature for high precision & accurate data matching
-        },
-      });
 
       // Add optimistic AI message placeholder
       const aiMsg = {
@@ -321,8 +303,47 @@ export function useAIChat() {
       };
       setMessages((prev) => [...prev, aiMsg]);
 
-      // Stream the response
-      const result = await chat.sendMessageStream(userText);
+      let result = null;
+      let lastErr = null;
+
+      // Try candidate models in order until one succeeds
+      for (const modelName of CANDIDATE_MODELS) {
+        try {
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            systemInstruction: systemPrompt,
+          });
+
+          const chat = model.startChat({
+            history,
+            generationConfig: {
+              maxOutputTokens: 2048,
+              temperature: 0.2,
+            },
+          });
+
+          result = await chat.sendMessageStream(userText);
+          // If stream initialization succeeds, break out of retry loop
+          if (result) break;
+        } catch (err) {
+          lastErr = err;
+          const errText = err?.message || "";
+          // If it's a key error (401/403/API_KEY_INVALID), don't try other models
+          if (
+            errText.includes("API_KEY") ||
+            errText.includes("API key") ||
+            errText.includes("401") ||
+            errText.includes("403")
+          ) {
+            throw err;
+          }
+          // Otherwise, continue loop to try next model name
+        }
+      }
+
+      if (!result) {
+        throw lastErr || new Error("All Gemini models failed to initialize.");
+      }
 
       let fullText = "";
       for await (const chunk of result.stream) {
@@ -342,14 +363,18 @@ export function useAIChat() {
         )
       );
     } catch (err) {
+      console.error("Gemini AI Error:", err);
       const errText = err?.message || "";
       const isKeyError =
         errText.includes("API_KEY") ||
         errText.includes("API key") ||
         errText.includes("401") ||
-        errText.includes("403");
+        errText.includes("403") ||
+        errText.includes("invalid key") ||
+        errText.includes("not valid");
+
       setError(isKeyError ? "bad_key" : "api_error");
-      // Remove the optimistic AI placeholder, keep the user message
+      // Remove optimistic AI placeholder, keep user message
       setMessages((prev) => {
         const last = prev[prev.length - 1];
         return last?.role === "assistant" && last?.streaming

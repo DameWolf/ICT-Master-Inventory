@@ -371,8 +371,8 @@ export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelet
         {/* ── QR Code Panel ── */}
         {!isEditing && (
           <div className="drawer-qr-panel">
-            <div className="drawer-qr-label">📱 Device QR Code</div>
-            <QRCard item={cur} size={150} />
+            <div className="drawer-qr-label">📱 DEVICE QR CODE</div>
+            <QRCard item={cur} preset="standard" />
           </div>
         )}
 

@@ -352,9 +352,14 @@
 
 /* ── Inline QR Panel inside Drawer ── */
 .drawer-qr-panel {
-  margin-top: 8px;
-  border-top: 1px solid #f0e8e0;
-  padding-top: 16px;
+  margin: 0 24px 8px;
+  border-top: 2px solid #e8dfd1;
+  padding: 18px 0 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
 }
 
 .drawer-qr-label {
@@ -362,11 +367,15 @@
   font-weight: 800;
   color: #800020;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 12px;
+  letter-spacing: 0.8px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  width: 100%;
+  font-family: 'Cinzel', serif;
+  border-bottom: 1px solid #f0e4d0;
+  padding-bottom: 10px;
 }
 
 /* ── QR button in table actions ── */

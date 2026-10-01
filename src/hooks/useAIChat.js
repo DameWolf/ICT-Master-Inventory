@@ -65,7 +65,9 @@ function buildInventoryContext(inventory) {
   const byDept     = {};
   const byCampus   = {};
   const byYear     = {};
+  const byBrand    = {};
   const byDevType  = {};
+  const currentYear = new Date().getFullYear();
 
   for (const item of inventory) {
     const status  = item.status   || "Unknown";
@@ -73,6 +75,7 @@ function buildInventoryContext(inventory) {
     const dept    = item.department || "Unknown";
     const campus  = item.campus   || "Unknown";
     const year    = item.yearPurchased || "Unknown";
+    const brand   = item.brand || "Unspecified";
     const devType = item.deviceType || item.name || "Unknown";
 
     byStatus[status] = (byStatus[status] || 0) + 1;
@@ -90,6 +93,12 @@ function buildInventoryContext(inventory) {
     if (status === "Defective")        byDept[dept].defective++;
     if (status === "For Replacement")  byDept[dept].forReplacement++;
 
+    if (!byBrand[brand]) byBrand[brand] = { total: 0, functional: 0, defective: 0, forReplacement: 0 };
+    byBrand[brand].total++;
+    if (status === "Functional")       byBrand[brand].functional++;
+    if (status === "Defective")        byBrand[brand].defective++;
+    if (status === "For Replacement")  byBrand[brand].forReplacement++;
+
     byCampus[campus]  = (byCampus[campus]  || 0) + 1;
     byYear[year]      = (byYear[year]      || 0) + 1;
     byDevType[devType]= (byDevType[devType]|| 0) + 1;
@@ -100,6 +109,18 @@ function buildInventoryContext(inventory) {
   const forReplacement = byStatus["For Replacement"] || 0;
   const forUpgrade     = byStatus["For Upgrade"]     || 0;
   const funcPct = total > 0 ? Math.round((functional / total) * 100) : 0;
+
+  // Age calculation
+  let over5Years = 0;
+  let over3Years = 0;
+  Object.entries(byYear).forEach(([y, count]) => {
+    const numericYear = parseInt(y, 10);
+    if (!isNaN(numericYear)) {
+      const age = currentYear - numericYear;
+      if (age >= 5) over5Years += count;
+      if (age >= 3) over3Years += count;
+    }
+  });
 
   // ── Aggregate stats ──────────────────────────────────────
   const catLines = Object.entries(byCategory)
@@ -118,6 +139,16 @@ function buildInventoryContext(inventory) {
     })
     .join("\n");
 
+  const brandLines = Object.entries(byBrand)
+    .filter(([b]) => b !== "Unspecified")
+    .sort((a, b) => b[1].total - a[1].total)
+    .slice(0, 15)
+    .map(([b, s]) => {
+      const defPct = s.total > 0 ? Math.round((s.defective / s.total) * 100) : 0;
+      return `  ${b}: ${s.total} total | ${s.functional} functional | ${s.defective} defective (${defPct}% defect rate) | ${s.forReplacement} for replacement`;
+    })
+    .join("\n");
+
   const campusLines = Object.entries(byCampus)
     .sort((a, b) => b[1] - a[1])
     .map(([c, n]) => `  ${c}: ${n} units`)
@@ -126,7 +157,7 @@ function buildInventoryContext(inventory) {
   const yearLines = Object.entries(byYear)
     .filter(([y]) => y && y !== "Unknown" && /^\d{4}$/.test(y))
     .sort((a, b) => Number(a[0]) - Number(b[0]))
-    .map(([y, c]) => `  ${y}: ${c} units`)
+    .map(([y, c]) => `  ${y}: ${c} units (${currentYear - Number(y)} years old)`)
     .join("\n");
 
   const topDevTypes = Object.entries(byDevType)
@@ -136,7 +167,6 @@ function buildInventoryContext(inventory) {
     .join("\n");
 
   // ── Full device-level data (compact TSV) ────────────────
-  // Columns: assetTag | category | deviceType | status | department | campus | yearPurchased | brand | model
   const tsvHeader = "assetTag\tcategory\tdeviceType\tstatus\tdepartment\tcampus\tyearPurchased\tbrand\tmodel";
   const tsvRows = inventory
     .map((i) =>
@@ -156,12 +186,13 @@ function buildInventoryContext(inventory) {
     )
     .join("\n");
 
-  return `=== INVENTORY STATISTICS ===
+  return `=== PRE-CALCULATED INVENTORY STATISTICS ===
 Total devices: ${total.toLocaleString()}
 Functional: ${functional.toLocaleString()} (${funcPct}%)
-Defective: ${defective.toLocaleString()}
+Defective: ${defective.toLocaleString()} (${total > 0 ? Math.round((defective / total) * 100) : 0}%)
 For Replacement: ${forReplacement.toLocaleString()}
 For Upgrade: ${forUpgrade.toLocaleString()}
+Aging Fleet: ${over5Years} devices are 5+ years old (${total > 0 ? Math.round((over5Years / total) * 100) : 0}%), ${over3Years} devices are 3+ years old.
 
 BY CATEGORY (total | functional | defective | for_replacement | for_upgrade):
 ${catLines}
@@ -169,74 +200,44 @@ ${catLines}
 BY DEPARTMENT (total | functional | defective | for_replacement):
 ${deptLines}
 
+BY BRAND & RELIABILITY (total | functional | defective | defect_rate | for_replacement):
+${brandLines || "  No brand data available"}
+
 BY CAMPUS:
 ${campusLines}
 
-BY PURCHASE YEAR:
+BY PURCHASE YEAR & AGE:
 ${yearLines || "  No year data available"}
 
 TOP DEVICE TYPES:
 ${topDevTypes}
 
-=== FULL DEVICE LIST (TAB-SEPARATED) ===
+=== FULL DEVICE LIST (TAB-SEPARATED RECORDS) ===
 ${tsvHeader}
 ${tsvRows}`;
 }
 
 // ── System prompt ────────────────────────────────────────────
-const SYSTEM_PROMPT = (context) => `You are an expert ICT Hardware Inventory Analyst and IT Asset Management Advisor for a school institution. You have full, real-time access to the complete hardware inventory data below — every device record is in the FULL DEVICE LIST section.
+const SYSTEM_PROMPT = (context) => `You are an elite, highly accurate ICT Hardware Inventory Analyst & IT Asset Management Specialist for an educational institution. You have real-time access to the exact hardware inventory data provided below.
 
-## YOUR PRIMARY ROLE
-Your answers must ALWAYS be grounded in the actual inventory data first. You are the go-to expert for:
-- Precise inventory queries (counts, breakdowns, specific assets)
-- Health analysis (functional rates, defective trends, aging equipment)
-- Procurement planning and budget justification
-- Comparing this institution's inventory against external industry standards
+## ACCURACY & DATA-GROUNDING MANDATES
+1. **Zero Hallucination Policy**: Base ALL numerical counts, lists, asset tags, and statistics strictly on the provided PRE-CALCULATED INVENTORY STATISTICS and FULL DEVICE LIST.
+2. **Pre-Calculated Stats Primacy**: Always use the PRE-CALCULATED INVENTORY STATISTICS section for category, department, brand, and status counts to ensure 100% mathematical precision.
+3. **Specific Item Searches**: When asked for specific devices (e.g., "Which items are defective in IT Dept?"), search through the FULL DEVICE LIST table lines and list the actual assetTags, deviceTypes, brands, and models.
+4. **Honest Limitations**: If requested data (e.g. serial numbers, specific room numbers) is absent from the dataset, state clearly: "That specific detail is not present in the active inventory database."
 
-## INVENTORY-FOCUSED ANALYSIS (always use real data)
-- Answer exact counts, percentages, and rankings directly from the FULL DEVICE LIST
-- Identify which departments, campuses, or categories have the worst health rates
-- Detect purchase-year clusters that indicate aging fleets
-- Track per-device patterns (e.g., a specific brand with high defect rates)
+## ANALYTICAL & COMPARATIVE CAPABILITIES
+When asked for insights, executive reports, or recommendations, provide deep analysis:
+- **Hardware Lifecycles**: Workstations/Desktops (5 yrs), Laptops (3-4 yrs), Servers (5-7 yrs), Network Switches (7-10 yrs), Monitors (7 yrs).
+- **Health Benchmark Targets**: Functional target ≥ 85%. Defective rate alarm > 10%. Replacement backlog alarm > 15%.
+- **DepEd / EdTech Guidelines**: Recommend 1:2 computer-to-student ratio for labs, multi-year replacement cycles, and standardization on reliable brands.
+- **Brand Reliability Analysis**: Flag brands that have an abnormally high defect rate based on the brand breakdown.
 
-## INDUSTRY BENCHMARK COMPARISONS (use your training knowledge — no internet needed)
-When analyzing the inventory, compare against these real-world ICT standards you know from training:
-
-**Hardware Lifecycle Benchmarks (typical industry standards):**
-- Desktops/Workstations: 4–6 years useful life (replace at 5–7 years)
-- Laptops/Notebooks: 3–5 years useful life (replace at 4–5 years)
-- Tablets: 3–4 years useful life
-- Servers: 5–7 years useful life
-- Network switches/routers: 7–10 years useful life
-- Printers: 5–7 years useful life
-- Monitors: 7–10 years useful life
-- UPS/Power devices: 4–5 years (battery replacement at 2–3 years)
-- Projectors: 5–7 years useful life
-
-**Health Rate Benchmarks (industry targets for educational institutions):**
-- Overall functional rate target: ≥85% of fleet
-- Defective rate alarm threshold: >10% of any category
-- For-replacement backlog alarm: >15% of any category
-
-**Philippines DepEd / Educational ICT Standards (use when relevant):**
-- DepEd recommends a minimum 1:2 computer-to-student ratio for computer labs
-- Typical school ICT budget allocation: 5–8% of total operating budget
-- Equipment procurement typically follows RA 9184 (Government Procurement Reform Act) guidelines
-
-**Common Comparison Points:**
-- Average school in the Philippines has 30–80 computing devices per campus
-- Well-managed institutions replace 10–15% of their computing fleet annually
-- A defective rate above 15% in Computing Devices typically signals deferred maintenance
-
-## RESPONSE RULES
-1. **Data first** — always cite actual numbers from the inventory before giving recommendations
-2. **Then compare** — if relevant, benchmark against industry standards above
-3. **Be specific** — name departments, campuses, categories, asset tags when answering
-4. **Flag risks clearly** — use language like "⚠️ Risk:" or "✅ Good:" to highlight key findings
-5. **Give actionable advice** — end with 1–3 concrete next steps when appropriate
-6. **Never hallucinate data** — if something isn't in the inventory, say so clearly
-7. **Be concise by default** — give detailed breakdowns only when asked
-8. **Context-aware** — remember and build on previous messages in this conversation
+## FORMATTING & OUTPUT RULES
+- Use clean **Markdown tables** when presenting item lists or multi-column data.
+- Use bold highlights (\`**word**\`) for key metrics.
+- Use clear sections with subheadings (\`### Section\`).
+- End complex responses with **1–3 Executive Action Steps**.
 
 ${context}`;
 
@@ -280,13 +281,23 @@ export function useAIChat() {
 
       const genAI = new GoogleGenerativeAI(apiKey);
 
-      const model = genAI.getGenerativeModel({
-        model: "gemini-flash-latest",
-        systemInstruction: systemPrompt,
-      });
+      // Try gemini-2.0-flash / gemini-1.5-flash / fallback to gemini-flash-latest
+      let modelName = "gemini-2.0-flash";
+      let model;
+      try {
+        model = genAI.getGenerativeModel({
+          model: modelName,
+          systemInstruction: systemPrompt,
+        });
+      } catch (_) {
+        modelName = "gemini-flash-latest";
+        model = genAI.getGenerativeModel({
+          model: modelName,
+          systemInstruction: systemPrompt,
+        });
+      }
 
       // Send only the last MAX_API_HISTORY messages to the API
-      // to control token usage while still giving the AI meaningful memory
       const recentMessages = prevMessages.slice(-MAX_API_HISTORY);
       const history = recentMessages.map((m) => ({
         role: m.role === "user" ? "user" : "model",
@@ -297,7 +308,7 @@ export function useAIChat() {
         history,
         generationConfig: {
           maxOutputTokens: 2048,
-          temperature: 0.3,
+          temperature: 0.2, // Lower temperature for high precision & accurate data matching
         },
       });
 

@@ -33,24 +33,123 @@ function MessageBubble({ message }) {
   const renderContent = (text) => {
     if (!text) return null;
     const lines = text.split("\n");
-    return lines.map((line, i) => {
-      // Bold: **text**
-      const boldified = line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-      const isBullet = /^[-•]\s/.test(line.trim());
-      if (isBullet) {
-        return (
-          <li
-            key={i}
-            dangerouslySetInnerHTML={{ __html: boldified.replace(/^[-•]\s/, "") }}
-          />
-        );
+    const elements = [];
+    let i = 0;
+
+    const formatInline = (str) => {
+      if (!str) return "";
+      return str
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        .replace(/`(.*?)`/g, "<code class=\"ai-inline-code\">$1</code>")
+        .replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" class="ai-inline-img" />');
+    };
+
+    while (i < lines.length) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      // Detect Table: line starts and ends with | or contains |
+      if (trimmed.startsWith("|") && trimmed.endsWith("|") && lines[i + 1] && lines[i + 1].includes("|-")) {
+        const tableLines = [];
+        while (i < lines.length && lines[i].trim().startsWith("|")) {
+          tableLines.push(lines[i].trim());
+          i++;
+        }
+
+        if (tableLines.length >= 2) {
+          const headers = tableLines[0]
+            .split("|")
+            .slice(1, -1)
+            .map((h) => h.trim());
+          
+          // Skip divider line (index 1)
+          const rowLines = tableLines.slice(2);
+          const rows = rowLines.map((r) =>
+            r
+              .split("|")
+              .slice(1, -1)
+              .map((cell) => cell.trim())
+          );
+
+          elements.push(
+            <div key={`table-${i}`} className="ai-table-wrapper">
+              <table className="ai-markdown-table">
+                <thead>
+                  <tr>
+                    {headers.map((h, idx) => (
+                      <th key={idx} dangerouslySetInnerHTML={{ __html: formatInline(h) }} />
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, rIdx) => (
+                    <tr key={rIdx}>
+                      {row.map((cell, cIdx) => (
+                        <td key={cIdx} dangerouslySetInnerHTML={{ __html: formatInline(cell) }} />
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+          continue;
+        }
       }
-      return line.trim() ? (
-        <p key={i} dangerouslySetInnerHTML={{ __html: boldified }} />
-      ) : (
-        <br key={i} />
-      );
-    });
+
+      // Detect Headings (### Header, ## Header, # Header)
+      const headingMatch = trimmed.match(/^(#{1,4})\s+(.*)$/);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        const title = headingMatch[2];
+        const Tag = level === 1 ? "h3" : level === 2 ? "h4" : "h5";
+        elements.push(
+          <Tag key={`head-${i}`} className="ai-md-heading" dangerouslySetInnerHTML={{ __html: formatInline(title) }} />
+        );
+        i++;
+        continue;
+      }
+
+      // Detect Bullets / Lists
+      const isBullet = /^[-•*]\s+/.test(trimmed);
+      const isNumbered = /^\d+\.\s+/.test(trimmed);
+
+      if (isBullet || isNumbered) {
+        const listItems = [];
+        const isNum = isNumbered;
+        while (i < lines.length) {
+          const curTrim = lines[i].trim();
+          if (isNum ? /^\d+\.\s+/.test(curTrim) : /^[-•*]\s+/.test(curTrim)) {
+            const content = curTrim.replace(/^([-•*]|\d+\.)\s+/, "");
+            listItems.push(content);
+            i++;
+          } else {
+            break;
+          }
+        }
+        const ListTag = isNum ? "ol" : "ul";
+        elements.push(
+          <ListTag key={`list-${i}`} className="ai-md-list">
+            {listItems.map((item, idx) => (
+              <li key={idx} dangerouslySetInnerHTML={{ __html: formatInline(item) }} />
+            ))}
+          </ListTag>
+        );
+        continue;
+      }
+
+      // Regular Paragraph or Line Break
+      if (trimmed) {
+        elements.push(
+          <p key={`p-${i}`} className="ai-md-p" dangerouslySetInnerHTML={{ __html: formatInline(trimmed) }} />
+        );
+      } else {
+        elements.push(<br key={`br-${i}`} />);
+      }
+      i++;
+    }
+
+    return elements;
   };
 
   const time = message.timestamp

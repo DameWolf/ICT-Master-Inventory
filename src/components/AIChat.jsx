@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useAIChat, getAIKey, setAIKey } from "../hooks/useAIChat";
+import { useAIChat, getAIKey, setAIKey, hasAnyAIKey } from "../hooks/useAIChat";
 import aiRobotIcon from "../assets/ai_assistant.png";
 import "./AIChat.css";
 
@@ -10,6 +10,10 @@ const SUGGESTED_PROMPTS = [
   "📅 Which purchase years have the most aging equipment?",
   "🔧 What should we prioritize for replacement?",
   "🏫 How does the campus device distribution look?",
+  "📈 How does our functional rate compare to industry benchmarks?",
+  "⏳ Which devices have exceeded their recommended lifecycle?",
+  "💰 Give me a procurement priority list based on the data",
+  "🔍 Are there any brands with unusually high defect rates?",
 ];
 
 function TypingIndicator() {
@@ -118,7 +122,7 @@ function getStoredFabPos() {
 export default function AIChat({ inventory, onOpenSettings }) {
   const [open, setOpen] = useState(false);
   const [inputVal, setInputVal] = useState("");
-  const [hasKey, setHasKey] = useState(() => Boolean(getAIKey()));
+  const [hasKey, setHasKey] = useState(() => hasAnyAIKey());
   const [fabPos, setFabPos] = useState(getStoredFabPos);
   const [isDragging, setIsDragging] = useState(false);
   const { messages, isLoading, error, setError, sendMessage, clearChat, stopGeneration } =
@@ -146,7 +150,7 @@ export default function AIChat({ inventory, onOpenSettings }) {
   // Re-check key every time the panel opens
   useEffect(() => {
     if (open) {
-      const key = Boolean(getAIKey());
+      const key = hasAnyAIKey();
       setHasKey(key);
       if (!key) setError(null);
       else if (error === "no_key") setError(null);

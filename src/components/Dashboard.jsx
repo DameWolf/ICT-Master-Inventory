@@ -12,10 +12,10 @@ import "./Dashboard.css";
 /* ─── Colour palette ─── */
 const CAT_COLORS = CATEGORIES.map((c) => c.color);
 const STATUS_PIE_COLORS = {
-  Functional:       "#22c55e",
-  "For Upgrade":    "#f59e0b",
-  "For Replacement":"#f97316",
-  Defective:        "#ef4444",
+  Functional: "#22c55e",
+  "For Upgrade": "#f59e0b",
+  "For Replacement": "#f97316",
+  Defective: "#ef4444",
 };
 
 /* ─── Custom Tooltip ─── */
@@ -32,9 +32,6 @@ function CustomTooltip({ active, payload, label }) {
     </div>
   );
 }
-
-/* (No custom label component needed — using CSS overlay) */
-
 
 /* ─── KPI Card ─── */
 function KpiCard({ icon, value, label, color, pct }) {
@@ -66,25 +63,32 @@ function SectionHeader({ title, subtitle }) {
 }
 
 export default function Dashboard({ inventory, onSelectCategory, onViewAll, darkMode }) {
-  const total          = inventory.length;
-  const functional     = inventory.filter((i) => i.status === "Functional").length;
-  const forReplacement = inventory.filter((i) => i.status === "For Replacement").length;
-  const forUpgrade     = inventory.filter((i) => i.status === "For Upgrade").length;
-  const defective      = inventory.filter((i) => i.status === "Defective").length;
+  const total = inventory.length;
+
+  const statusSummary = useMemo(() => {
+    const summary = { Functional: 0, "For Upgrade": 0, "For Replacement": 0, Defective: 0 };
+    inventory.forEach((i) => {
+      if (summary[i.status] !== undefined) summary[i.status] += 1;
+    });
+    return summary;
+  }, [inventory]);
+
+  const functional = statusSummary.Functional;
+  const forReplacement = statusSummary["For Replacement"];
+  const forUpgrade = statusSummary["For Upgrade"];
+  const defective = statusSummary.Defective;
 
   const textColor = darkMode ? "#ffffff" : "#2b0f19";
   const mutedColor = darkMode ? "rgba(255,255,255,0.7)" : "#7a5866";
   const gridColor = darkMode ? "rgba(255,255,255,0.12)" : "#f0e8e0";
 
-  /* ─── Status donut data ─── */
   const statusData = useMemo(() => [
-    { name: "Functional",        value: functional,     color: STATUS_PIE_COLORS.Functional },
-    { name: "For Upgrade",       value: forUpgrade,     color: STATUS_PIE_COLORS["For Upgrade"] },
-    { name: "For Replacement",   value: forReplacement, color: STATUS_PIE_COLORS["For Replacement"] },
-    { name: "Defective",         value: defective,      color: STATUS_PIE_COLORS.Defective },
+    { name: "Functional", value: functional, color: STATUS_PIE_COLORS.Functional },
+    { name: "For Upgrade", value: forUpgrade, color: STATUS_PIE_COLORS["For Upgrade"] },
+    { name: "For Replacement", value: forReplacement, color: STATUS_PIE_COLORS["For Replacement"] },
+    { name: "Defective", value: defective, color: STATUS_PIE_COLORS.Defective },
   ].filter((d) => d.value > 0), [functional, forUpgrade, forReplacement, defective]);
 
-  /* ─── Category bar chart ─── */
   const catData = useMemo(() =>
     CATEGORIES.map((cat) => ({
       name: cat.name.replace(" Devices", "").replace(" Equipment", "").replace(" Systems", ""),
@@ -94,21 +98,19 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
     })).filter((d) => d.count > 0).sort((a, b) => b.count - a.count),
   [inventory]);
 
-  /* ─── Campus bar chart ─── */
   const campusData = useMemo(() =>
     CAMPUSES.map((campus) => ({
       name: campus,
       count: inventory.filter((i) => i.campus === campus).length,
       functional: inventory.filter((i) => i.campus === campus && i.status === "Functional").length,
-      defective:  inventory.filter((i) => i.campus === campus && i.status === "Defective").length,
+      defective: inventory.filter((i) => i.campus === campus && i.status === "Defective").length,
     })).filter((c) => c.count > 0),
   [inventory]);
 
-  /* ─── Year trend chart ─── */
   const yearData = useMemo(() => {
     const counts = {};
     inventory.forEach((i) => {
-      const y = parseInt(i.yearPurchased);
+      const y = parseInt(i.yearPurchased, 10);
       if (y >= 2000 && y <= 2030) counts[y] = (counts[y] || 0) + 1;
     });
     return Object.entries(counts)
@@ -116,37 +118,45 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
       .map(([year, count]) => ({ year, count }));
   }, [inventory]);
 
-  /* ─── Radar chart: status distribution per top category ─── */
   const radarData = useMemo(() => {
     const topCats = catData.slice(0, 6);
     return topCats.map((cat) => {
       const items = inventory.filter((i) => i.category === cat.full || i.tabCategory === cat.full);
       return {
         category: cat.name,
-        Functional:       items.filter((i) => i.status === "Functional").length,
-        "For Upgrade":    items.filter((i) => i.status === "For Upgrade").length,
-        "For Replacement":items.filter((i) => i.status === "For Replacement").length,
-        Defective:        items.filter((i) => i.status === "Defective").length,
+        Functional: items.filter((i) => i.status === "Functional").length,
+        "For Upgrade": items.filter((i) => i.status === "For Upgrade").length,
+        "For Replacement": items.filter((i) => i.status === "For Replacement").length,
+        Defective: items.filter((i) => i.status === "Defective").length,
       };
     });
   }, [inventory, catData]);
 
-  /* ─── Device type breakdown for top 3 cats ─── */
   const topTypeData = useMemo(() => {
     const topCat = catData[0];
     if (!topCat) return [];
     const items = inventory.filter((i) => i.category === topCat.full || i.tabCategory === topCat.full);
     const typeCounts = {};
-    items.forEach((i) => { typeCounts[i.deviceType] = (typeCounts[i.deviceType] || 0) + 1; });
+    items.forEach((i) => {
+      typeCounts[i.deviceType] = (typeCounts[i.deviceType] || 0) + 1;
+    });
     return Object.entries(typeCounts)
-      .sort(([,a],[,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 8)
       .map(([name, value]) => ({ name, value }));
   }, [inventory, catData]);
 
+  const categoryCards = useMemo(() =>
+    CATEGORIES.map((cat) => {
+      const count = inventory.filter((i) => i.category === cat.name || i.tabCategory === cat.name).length;
+      const funcCount = inventory.filter((i) => (i.category === cat.name || i.tabCategory === cat.name) && i.status === "Functional").length;
+      const pct = count > 0 ? Math.round((funcCount / count) * 100) : 0;
+      return { ...cat, count, pct };
+    }),
+  [inventory]);
+
   return (
     <div className="dashboard">
-      {/* ── Welcome Banner ── */}
       <div className="dashboard-welcome">
         <div>
           <div className="university-badge">
@@ -163,19 +173,16 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
         </button>
       </div>
 
-      {/* ── KPI Row ── */}
       <div className="kpi-grid">
-        <KpiCard icon="📦" value={total}          label="Total Devices"   color="#800020"                           />
-        <KpiCard icon="✅" value={functional}     label="Functional"      color="#22c55e"  pct={Math.round(functional/total*100)}     />
-        <KpiCard icon="⬆️" value={forUpgrade}     label="For Upgrade"     color="#f59e0b"  pct={Math.round(forUpgrade/total*100)}     />
-        <KpiCard icon="🔄" value={forReplacement} label="For Replacement" color="#f97316"  pct={Math.round(forReplacement/total*100)} />
-        <KpiCard icon="🔴" value={defective}      label="Defective"       color="#ef4444"  pct={Math.round(defective/total*100)}      />
-        <KpiCard icon="🏫" value={campusData.length} label="Campuses"     color="#d4af37"                           />
+        <KpiCard icon="📦" value={total} label="Total Devices" color="#800020" />
+        <KpiCard icon="✅" value={functional} label="Functional" color="#22c55e" pct={Math.round((functional / total) * 100 || 0)} />
+        <KpiCard icon="⬆️" value={forUpgrade} label="For Upgrade" color="#f59e0b" pct={Math.round((forUpgrade / total) * 100 || 0)} />
+        <KpiCard icon="🔄" value={forReplacement} label="For Replacement" color="#f97316" pct={Math.round((forReplacement / total) * 100 || 0)} />
+        <KpiCard icon="🔴" value={defective} label="Defective" color="#ef4444" pct={Math.round((defective / total) * 100 || 0)} />
+        <KpiCard icon="🏫" value={campusData.length} label="Campuses" color="#d4af37" />
       </div>
 
-      {/* ── Row 1: Status Donut + Category Bar ── */}
       <div className="charts-row charts-row-2">
-        {/* Status Donut */}
         <div className="chart-card chart-donut-wrap">
           <SectionHeader title="Device Status" subtitle="Health overview" />
           <div className="donut-chart-area" style={{ position: "relative" }}>
@@ -208,7 +215,6 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
                 />
               </PieChart>
             </ResponsiveContainer>
-            {/* Center text overlay */}
             <div style={{
               position: "absolute",
               top: "42%",
@@ -223,7 +229,6 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
           </div>
         </div>
 
-        {/* Category Horizontal Bar */}
         <div className="chart-card">
           <SectionHeader title="Devices by Category" subtitle="All 12 ICT hardware categories" />
           <ResponsiveContainer width="100%" height={280}>
@@ -237,8 +242,7 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
                 tick={{ fontSize: 11, fill: textColor, fontWeight: 600 }}
               />
               <RTooltip content={<CustomTooltip />} />
-              <Bar dataKey="count" name="Devices" radius={[0, 6, 6, 0]} cursor="pointer"
-                onClick={(d) => onSelectCategory(d.full)}>
+              <Bar dataKey="count" name="Devices" radius={[0, 6, 6, 0]} cursor="pointer" onClick={(d) => onSelectCategory(d.full)}>
                 {catData.map((entry, i) => (
                   <Cell key={i} fill={entry.color} />
                 ))}
@@ -248,16 +252,14 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
         </div>
       </div>
 
-      {/* ── Row 2: Year Trend + Campus Grouped Bar ── */}
       <div className="charts-row charts-row-2">
-        {/* Year Purchased Area Trend */}
         <div className="chart-card">
           <SectionHeader title="Procurement Trend" subtitle="Devices purchased per year" />
           <ResponsiveContainer width="100%" height={230}>
             <AreaChart data={yearData} margin={{ left: 0, right: 20, top: 8, bottom: 4 }}>
               <defs>
                 <linearGradient id="yearGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor={darkMode ? "#ffd700" : "#800020"} stopOpacity={0.35} />
+                  <stop offset="5%" stopColor={darkMode ? "#ffd700" : "#800020"} stopOpacity={0.35} />
                   <stop offset="95%" stopColor={darkMode ? "#ffd700" : "#800020"} stopOpacity={0} />
                 </linearGradient>
               </defs>
@@ -279,7 +281,6 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
           </ResponsiveContainer>
         </div>
 
-        {/* Campus Grouped Bar */}
         <div className="chart-card">
           <SectionHeader title="Campus Distribution" subtitle="Devices across all campuses" />
           <ResponsiveContainer width="100%" height={230}>
@@ -290,17 +291,15 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
               <RTooltip content={<CustomTooltip />} />
               <Legend iconType="circle" iconSize={10}
                 formatter={(v) => <span style={{ fontSize: 11, fontWeight: 700, color: textColor }}>{v}</span>} />
-              <Bar dataKey="count"      name="Total"      fill={darkMode ? "#9E1B32" : "#800020"} radius={[6,6,0,0]} />
-              <Bar dataKey="functional" name="Functional" fill="#22c55e" radius={[6,6,0,0]} />
-              <Bar dataKey="defective"  name="Defective"  fill="#ef4444" radius={[6,6,0,0]} />
+              <Bar dataKey="count" name="Total" fill={darkMode ? "#9E1B32" : "#800020"} radius={[6, 6, 0, 0]} />
+              <Bar dataKey="functional" name="Functional" fill="#22c55e" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="defective" name="Defective" fill="#ef4444" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* ── Row 3: Radar + Top Device Types Donut ── */}
       <div className="charts-row charts-row-2">
-        {/* Radar Chart */}
         <div className="chart-card">
           <SectionHeader title="Status Radar" subtitle="Functional vs defective per top category" />
           <ResponsiveContainer width="100%" height={270}>
@@ -308,9 +307,9 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
               <PolarGrid stroke={gridColor} />
               <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: textColor, fontWeight: 700 }} />
               <PolarRadiusAxis tick={{ fontSize: 9, fill: mutedColor }} />
-              <Radar name="Functional"      dataKey="Functional"       stroke="#22c55e" fill="#22c55e" fillOpacity={0.25} strokeWidth={2} />
-              <Radar name="Defective"       dataKey="Defective"        stroke="#ef4444" fill="#ef4444" fillOpacity={0.2}  strokeWidth={2} />
-              <Radar name="For Replacement" dataKey="For Replacement"  stroke="#f97316" fill="#f97316" fillOpacity={0.15} strokeWidth={1.5} />
+              <Radar name="Functional" dataKey="Functional" stroke="#22c55e" fill="#22c55e" fillOpacity={0.25} strokeWidth={2} />
+              <Radar name="Defective" dataKey="Defective" stroke="#ef4444" fill="#ef4444" fillOpacity={0.2} strokeWidth={2} />
+              <Radar name="For Replacement" dataKey="For Replacement" stroke="#f97316" fill="#f97316" fillOpacity={0.15} strokeWidth={1.5} />
               <RTooltip content={<CustomTooltip />} />
               <Legend iconType="circle" iconSize={10}
                 formatter={(v) => <span style={{ fontSize: 11, fontWeight: 700, color: textColor }}>{v}</span>} />
@@ -318,12 +317,8 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
           </ResponsiveContainer>
         </div>
 
-        {/* Top Device Types donut for largest category */}
         <div className="chart-card">
-          <SectionHeader
-            title={`${catData[0]?.full || "Top Category"} Breakdown`}
-            subtitle="By sub-device type"
-          />
+          <SectionHeader title={`${catData[0]?.full || "Top Category"} Breakdown`} subtitle="By sub-device type" />
           <ResponsiveContainer width="100%" height={270}>
             <PieChart>
               <Pie
@@ -348,40 +343,34 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
         </div>
       </div>
 
-      {/* ── Row 4: Category Cards ── */}
       <SectionHeader title="12 ICT Hardware Categories" subtitle="Click to browse" />
       <div className="category-grid">
-        {CATEGORIES.map((cat, idx) => {
-          const count = inventory.filter((i) => i.category === cat.name || i.tabCategory === cat.name).length;
-          const funcCount = inventory.filter((i) => (i.category === cat.name || i.tabCategory === cat.name) && i.status === "Functional").length;
-          const pct = count > 0 ? Math.round(funcCount / count * 100) : 0;
-          return (
-            <button
-              key={cat.name}
-              className="category-card"
-              onClick={() => onSelectCategory(cat.name)}
-              id={`dashboard-cat-${cat.name.replace(/\s+/g, "-").toLowerCase()}`}
-              style={{ "--cat-color": cat.color }}
-            >
-              <div className="category-card-header">
-                <span className="category-card-icon">{cat.icon}</span>
-                <span className="category-card-count">{count.toLocaleString()} units</span>
-              </div>
-              <h4 className="category-card-name">{cat.name}</h4>
-              <div className="cat-health-row">
-                <span className="cat-health-pct" style={{ color: pct >= 80 ? "#22c55e" : pct >= 60 ? "#f59e0b" : "#ef4444" }}>
-                  {pct}% functional
-                </span>
-              </div>
-              <div className="category-card-bar">
-                <div
-                  className="category-card-bar-fill"
-                  style={{ width: `${Math.min(100, (count / Math.max(1, total)) * 100 * 3)}%`, background: cat.color }}
-                />
-              </div>
-            </button>
-          );
-        })}
+        {categoryCards.map((cat) => (
+          <button
+            key={cat.name}
+            className="category-card"
+            onClick={() => onSelectCategory(cat.name)}
+            id={`dashboard-cat-${cat.name.replace(/\s+/g, "-").toLowerCase()}`}
+            style={{ "--cat-color": cat.color }}
+          >
+            <div className="category-card-header">
+              <span className="category-card-icon">{cat.icon}</span>
+              <span className="category-card-count">{cat.count.toLocaleString()} units</span>
+            </div>
+            <h4 className="category-card-name">{cat.name}</h4>
+            <div className="cat-health-row">
+              <span className="cat-health-pct" style={{ color: cat.pct >= 80 ? "#22c55e" : cat.pct >= 60 ? "#f59e0b" : "#ef4444" }}>
+                {cat.pct}% functional
+              </span>
+            </div>
+            <div className="category-card-bar">
+              <div
+                className="category-card-bar-fill"
+                style={{ width: `${Math.min(100, (cat.count / Math.max(1, total)) * 100 * 3)}%`, background: cat.color }}
+              />
+            </div>
+          </button>
+        ))}
       </div>
     </div>
   );

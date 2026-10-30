@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useAIChat, getAIKey, setAIKey, hasAnyAIKey } from "../hooks/useAIChat";
+import { useVoice } from "../hooks/useVoice";
 import aiRobotIcon from "../assets/ai_assistant.png";
 import "./AIChat.css";
 
@@ -26,7 +27,7 @@ function TypingIndicator() {
   );
 }
 
-function MessageBubble({ message }) {
+function MessageBubble({ message, onReplay, isSpeakingThis, onStopSpeaking, ttsSupported }) {
   const isUser = message.role === "user";
 
   // Simple markdown-like rendering: bold, bullets
@@ -168,7 +169,26 @@ function MessageBubble({ message }) {
           {message.content ? renderContent(message.content) : null}
           {message.streaming && !message.content && <TypingIndicator />}
         </div>
-        <span className="ai-bubble-time">{time}</span>
+        <div className="ai-bubble-footer">
+          <span className="ai-bubble-time">{time}</span>
+          {!isUser && message.content && !message.streaming && ttsSupported && (
+            <button
+              className={`ai-speak-btn ${isSpeakingThis ? "ai-speak-btn--active" : ""}`}
+              onClick={() => isSpeakingThis ? onStopSpeaking?.() : onReplay?.(message.content)}
+              title={isSpeakingThis ? "Stop speaking" : "Read aloud"}
+              aria-label={isSpeakingThis ? "Stop speaking" : "Read this message aloud"}
+            >
+              {isSpeakingThis ? (
+                <>
+                  <span className="ai-speak-wave">
+                    <span /><span /><span />
+                  </span>
+                  ⏹
+                </>
+              ) : "🔊"}
+            </button>
+          )}
+        </div>
       </div>
       {isUser && (
         <div className="ai-avatar ai-avatar--user" aria-label="You">
@@ -224,8 +244,32 @@ export default function AIChat({ inventory, onOpenSettings }) {
   const [hasKey, setHasKey] = useState(() => hasAnyAIKey());
   const [fabPos, setFabPos] = useState(getStoredFabPos);
   const [isDragging, setIsDragging] = useState(false);
+  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
+  const [speakingMsgIndex, setSpeakingMsgIndex] = useState(-1);
+  const [voiceMode, setVoiceMode] = useState(false); // true when user initiated via mic
   const { messages, isLoading, error, setError, sendMessage, clearChat, stopGeneration } =
     useAIChat();
+
+  const {
+    isListening,
+    transcript,
+    interimTranscript,
+    startListening,
+    stopListening,
+    sttSupported,
+    isSpeaking,
+    speak,
+    stopSpeaking,
+    replayMessage,
+    ttsSupported,
+    voices,
+    selectedVoiceURI,
+    setSelectedVoiceURI,
+    speechRate,
+    setSpeechRate,
+    autoSpeak,
+    setAutoSpeak,
+  } = useVoice();
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -316,8 +360,9 @@ export default function AIChat({ inventory, onOpenSettings }) {
     const text = inputVal.trim();
     if (!text || isLoading) return;
     setInputVal("");
+    const prevMsgCount = messages.length;
     await sendMessage(text, inventory);
-  }, [inputVal, isLoading, sendMessage, inventory]);
+  }, [inputVal, isLoading, sendMessage, inventory, messages.length]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -325,6 +370,74 @@ export default function AIChat({ inventory, onOpenSettings }) {
       handleSend();
     }
   };
+
+  // ── Voice: mic toggle ──
+  const handleMicToggle = useCallback(() => {
+    if (isListening) {
+      stopListening();
+      // If there's a transcript, put it in the input
+      const currentText = transcript || "";
+      if (currentText.trim()) {
+        setInputVal(currentText.trim());
+      }
+    } else {
+      setVoiceMode(true);
+      startListening((finalText) => {
+        // Auto-send when speech ends
+        if (finalText.trim() && !isLoading) {
+          setInputVal("");
+          sendMessage(finalText.trim(), inventory);
+        }
+      });
+    }
+  }, [isListening, stopListening, startListening, transcript, isLoading, sendMessage, inventory]);
+
+  // ── Update input with live transcript ──
+  useEffect(() => {
+    if (isListening) {
+      const liveText = ((transcript || "") + " " + (interimTranscript || "")).trim();
+      if (liveText) setInputVal(liveText);
+    }
+  }, [transcript, interimTranscript, isListening]);
+
+  // ── Auto-speak AI responses when voice mode is active ──
+  const prevMsgCountRef = useRef(messages.length);
+  useEffect(() => {
+    if (
+      autoSpeak &&
+      voiceMode &&
+      messages.length > prevMsgCountRef.current &&
+      messages.length >= 2
+    ) {
+      const lastMsg = messages[messages.length - 1];
+      if (
+        lastMsg.role === "assistant" &&
+        lastMsg.content &&
+        !lastMsg.streaming
+      ) {
+        setSpeakingMsgIndex(messages.length - 1);
+        speak(lastMsg.content);
+      }
+    }
+    prevMsgCountRef.current = messages.length;
+  }, [messages, autoSpeak, voiceMode, speak]);
+
+  // ── Track when speaking finishes ──
+  useEffect(() => {
+    if (!isSpeaking && speakingMsgIndex >= 0) {
+      setSpeakingMsgIndex(-1);
+    }
+  }, [isSpeaking, speakingMsgIndex]);
+
+  // ── Replay handler for individual messages ──
+  const handleReplay = useCallback((text) => {
+    speak(text);
+  }, [speak]);
+
+  const handleStopSpeaking = useCallback(() => {
+    stopSpeaking();
+    setSpeakingMsgIndex(-1);
+  }, [stopSpeaking]);
 
   const handleSuggest = (prompt) => {
     setInputVal(prompt.replace(/^[^\s]+\s/, "")); // strip leading emoji
@@ -421,6 +534,16 @@ export default function AIChat({ inventory, onOpenSettings }) {
               </div>
             </div>
             <div className="ai-header-actions">
+              {ttsSupported && (
+                <button
+                  className={`ai-icon-btn ${voiceSettingsOpen ? "ai-icon-btn--active" : ""}`}
+                  onClick={() => setVoiceSettingsOpen((v) => !v)}
+                  title="Voice settings"
+                  aria-label="Voice settings"
+                >
+                  🎙️
+                </button>
+              )}
               {messages.length > 0 && (
                 <button
                   className="ai-icon-btn"
@@ -442,6 +565,61 @@ export default function AIChat({ inventory, onOpenSettings }) {
               </button>
             </div>
           </div>
+
+          {/* Voice Settings Dropdown */}
+          {voiceSettingsOpen && (
+            <div className="ai-voice-settings">
+              <div className="ai-voice-settings-row">
+                <label className="ai-voice-label">Voice</label>
+                <select
+                  className="ai-voice-select"
+                  value={selectedVoiceURI}
+                  onChange={(e) => setSelectedVoiceURI(e.target.value)}
+                >
+                  {voices
+                    .filter((v) => v.lang.startsWith("en"))
+                    .map((v) => (
+                      <option key={v.voiceURI} value={v.voiceURI}>
+                        {v.name} ({v.lang})
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div className="ai-voice-settings-row">
+                <label className="ai-voice-label">Speed</label>
+                <div className="ai-voice-rate-control">
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.1"
+                    value={speechRate}
+                    onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+                    className="ai-voice-slider"
+                  />
+                  <span className="ai-voice-rate-val">{speechRate.toFixed(1)}x</span>
+                </div>
+              </div>
+              <div className="ai-voice-settings-row">
+                <label className="ai-voice-label">Auto-speak</label>
+                <button
+                  className={`ai-voice-toggle ${autoSpeak ? "ai-voice-toggle--on" : ""}`}
+                  onClick={() => setAutoSpeak(!autoSpeak)}
+                  aria-label="Toggle auto-speak"
+                >
+                  <span className="ai-voice-toggle-track">
+                    <span className="ai-voice-toggle-thumb" />
+                  </span>
+                  {autoSpeak ? "On" : "Off"}
+                </button>
+              </div>
+              {!sttSupported && (
+                <div className="ai-voice-compat-warn">
+                  ⚠️ Speech-to-text requires Chrome or Edge browser
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Body */}
           <div className="ai-panel-body">
@@ -477,7 +655,14 @@ export default function AIChat({ inventory, onOpenSettings }) {
                 {messages.length > 0 && (
                   <div className="ai-messages">
                     {messages.map((msg, i) => (
-                      <MessageBubble key={i} message={msg} />
+                      <MessageBubble
+                        key={i}
+                        message={msg}
+                        onReplay={handleReplay}
+                        isSpeakingThis={isSpeaking && speakingMsgIndex === i}
+                        onStopSpeaking={handleStopSpeaking}
+                        ttsSupported={ttsSupported}
+                      />
                     ))}
                     {isLoading && messages[messages.length - 1]?.role === "user" && (
                       <div className="ai-message ai-message--ai">
@@ -515,17 +700,48 @@ export default function AIChat({ inventory, onOpenSettings }) {
           {/* Input bar */}
           {hasKey && (
             <div className="ai-panel-footer">
+              {/* Listening indicator bar */}
+              {isListening && (
+                <div className="ai-listening-bar">
+                  <div className="ai-listening-pulse" />
+                  <span className="ai-listening-label">🎤 Listening… speak now</span>
+                  <button
+                    className="ai-listening-cancel"
+                    onClick={() => { stopListening(); setInputVal(""); }}
+                    title="Cancel"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
               <div className="ai-input-wrap">
+                {sttSupported && (
+                  <button
+                    className={`ai-mic-btn ${isListening ? "ai-mic-btn--active" : ""}`}
+                    onClick={handleMicToggle}
+                    disabled={isLoading}
+                    aria-label={isListening ? "Stop listening" : "Start voice input"}
+                    title={isListening ? "Stop listening" : "🎤 Speak to AI"}
+                    id="ai-mic-btn"
+                  >
+                    {isListening ? (
+                      <span className="ai-mic-recording">
+                        <span className="ai-mic-dot" />
+                      </span>
+                    ) : "🎤"}
+                  </button>
+                )}
                 <textarea
                   ref={inputRef}
-                  className="ai-input"
-                  placeholder="Ask about your inventory…"
+                  className={`ai-input ${isListening ? "ai-input--listening" : ""}`}
+                  placeholder={isListening ? "Listening…" : "Ask about your inventory…"}
                   value={inputVal}
                   onChange={(e) => setInputVal(e.target.value)}
                   onKeyDown={handleKeyDown}
                   rows={1}
                   id="ai-chat-input"
                   aria-label="Type your question"
+                  readOnly={isListening}
                 />
                 {isLoading ? (
                   <button
@@ -540,7 +756,7 @@ export default function AIChat({ inventory, onOpenSettings }) {
                   <button
                     className="ai-send-btn"
                     onClick={handleSend}
-                    disabled={!inputVal.trim()}
+                    disabled={!inputVal.trim() || isListening}
                     aria-label="Send message"
                     title="Send (Enter)"
                     id="ai-send-btn"
@@ -549,7 +765,9 @@ export default function AIChat({ inventory, onOpenSettings }) {
                   </button>
                 )}
               </div>
-              <p className="ai-footer-note">AI can make mistakes. Verify critical data in the inventory table.</p>
+              <p className="ai-footer-note">
+                {isSpeaking ? "🔊 AI is speaking…" : "AI can make mistakes. Verify critical data in the inventory table."}
+              </p>
             </div>
           )}
         </div>

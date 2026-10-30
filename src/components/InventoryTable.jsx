@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { STATUS_COLORS, getCategoryMeta } from "../data/inventoryData";
 import { getColumnsForCategory, DEFAULT_COLUMNS } from "../hooks/useSheetInventory";
 import ItemModal from "./ItemModal";
@@ -8,9 +8,10 @@ import BatchQRModal from "./BatchQRModal";
 import "./InventoryTable.css";
 
 const STATUSES = ["Functional", "For Upgrade", "For Replacement", "Defective"];
+const PAGE_SIZE = 15;
 
 /* ─── Mobile Card ─── */
-function ItemCard({ item, onView, onEdit, onDelete }) {
+const ItemCard = React.memo(function ItemCard({ item, onView, onEdit, onDelete }) {
   const meta = getCategoryMeta(item.category);
   return (
     <div
@@ -78,7 +79,7 @@ function ItemCard({ item, onView, onEdit, onDelete }) {
       </div>
     </div>
   );
-}
+});
 
 export default function InventoryTable({ inventory, selectedCategory, onUpdate, onDelete, onAdd, onAddToast }) {
   const [search, setSearchState] = useState(() => {
@@ -95,110 +96,126 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
     return isNaN(p) || p < 1 ? 1 : p;
   });
 
-  const [sortConfig, setSortConfig]     = useState({ key: "name", dir: "asc" });
-  const [modalOpen, setModalOpen]       = useState(false);
-  const [editItem, setEditItem]         = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: "name", dir: "asc" });
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editItem, setEditItem] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [drawerItem, setDrawerItem]     = useState(null);
-  const [qrItem, setQrItem]             = useState(null);
-  const [batchQrOpen, setBatchQrOpen]   = useState(false);
-  const [filtersOpen, setFiltersOpen]  = useState(false);
-  const PAGE_SIZE = 15;
+  const [drawerItem, setDrawerItem] = useState(null);
+  const [qrItem, setQrItem] = useState(null);
+  const [batchQrOpen, setBatchQrOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const setSearch = (val) => {
+  const setSearch = useCallback((val) => {
     setSearchState(val);
     localStorage.setItem("ict_table_search", val);
-  };
+  }, []);
 
-  const setStatusFilter = (val) => {
+  const setStatusFilter = useCallback((val) => {
     setStatusFilterState(val);
     localStorage.setItem("ict_table_status_filter", val);
-  };
+  }, []);
 
-  const setCampusFilter = (val) => {
+  const setCampusFilter = useCallback((val) => {
     setCampusFilterState(val);
     localStorage.setItem("ict_table_campus_filter", val);
-  };
+  }, []);
 
-  const setCurrentPage = (val) => {
+  const setCurrentPage = useCallback((val) => {
     const pageNum = typeof val === "function" ? val(currentPage) : val;
     setCurrentPageState(pageNum);
     localStorage.setItem("ict_table_page", String(pageNum));
-  };
+  }, [currentPage]);
 
-  const meta = selectedCategory ? getCategoryMeta(selectedCategory) : { color: "#800020", icon: "📦" };
+  const meta = useMemo(
+    () => selectedCategory ? getCategoryMeta(selectedCategory) : { color: "#800020", icon: "📦" },
+    [selectedCategory]
+  );
   const catColor = meta.color;
 
-  // Dynamic columns per-category — the core of this fix
-  const columns = selectedCategory
-    ? getColumnsForCategory(selectedCategory)
-    : DEFAULT_COLUMNS;
+  const columns = useMemo(
+    () => selectedCategory ? getColumnsForCategory(selectedCategory) : DEFAULT_COLUMNS,
+    [selectedCategory]
+  );
 
-  // Campuses present in current category
-  const availableCampuses = [...new Set(
-    inventory
-      .filter((i) => !selectedCategory || i.category === selectedCategory || i.tabCategory === selectedCategory)
-      .map((i) => i.campus)
-      .filter(Boolean)
-  )].sort();
+  const availableCampuses = useMemo(
+    () => [...new Set(
+      inventory
+        .filter((i) => !selectedCategory || i.category === selectedCategory || i.tabCategory === selectedCategory)
+        .map((i) => i.campus)
+        .filter(Boolean)
+    )].sort(),
+    [inventory, selectedCategory]
+  );
 
-  const filtered = inventory
-    .filter((item) => {
-      const matchCat    = !selectedCategory || item.category === selectedCategory || item.tabCategory === selectedCategory;
+  const filtered = useMemo(() => {
+    return inventory
+      .filter((item) => {
+        const matchCat = !selectedCategory || item.category === selectedCategory || item.tabCategory === selectedCategory;
+        const matchCampus = campusFilter === "All" || item.campus === campusFilter;
+        const matchSearch =
+          !search ||
+          item.name?.toLowerCase().includes(search.toLowerCase()) ||
+          item.department?.toLowerCase().includes(search.toLowerCase()) ||
+          item.assignedUser?.toLowerCase().includes(search.toLowerCase()) ||
+          item.processor?.toLowerCase().includes(search.toLowerCase()) ||
+          item.assetTag?.toLowerCase().includes(search.toLowerCase()) ||
+          item.campus?.toLowerCase().includes(search.toLowerCase());
+        const matchStatus = statusFilter === "All" || item.status === statusFilter;
+        return matchCat && matchCampus && matchSearch && matchStatus;
+      })
+      .sort((a, b) => {
+        const { key, dir } = sortConfig;
+        const av = a[key] ?? "";
+        const bv = b[key] ?? "";
+        const cmp = typeof av === "number" ? av - bv : String(av).localeCompare(String(bv));
+        return dir === "asc" ? cmp : -cmp;
+      });
+  }, [inventory, selectedCategory, campusFilter, search, statusFilter, sortConfig]);
 
-      const matchCampus = campusFilter === "All" || item.campus === campusFilter;
-      const matchSearch =
-        !search ||
-        item.name?.toLowerCase().includes(search.toLowerCase()) ||
-        item.department?.toLowerCase().includes(search.toLowerCase()) ||
-        item.assignedUser?.toLowerCase().includes(search.toLowerCase()) ||
-        item.processor?.toLowerCase().includes(search.toLowerCase()) ||
-        item.assetTag?.toLowerCase().includes(search.toLowerCase()) ||
-        item.campus?.toLowerCase().includes(search.toLowerCase());
-      const matchStatus = statusFilter === "All" || item.status === statusFilter;
-      return matchCat && matchCampus && matchSearch && matchStatus;
-    })
-    .sort((a, b) => {
-      const { key, dir } = sortConfig;
-      const av = a[key] ?? "";
-      const bv = b[key] ?? "";
-      const cmp = typeof av === "number" ? av - bv : String(av).localeCompare(String(bv));
-      return dir === "asc" ? cmp : -cmp;
-    });
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)),
+    [filtered.length]
+  );
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated  = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginated = useMemo(
+    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filtered, currentPage]
+  );
 
-  const handleSort   = (key) => {
+  const handleSort = useCallback((key) => {
     setSortConfig((prev) => prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" });
     setCurrentPage(1);
-  };
-  const handleSearch = (e) => { setSearch(e.target.value); setCurrentPage(1); };
-  const handleStatusFilter = (s) => { setStatusFilter(s); setCurrentPage(1); };
-  const handleCampusFilter = (c) => { setCampusFilter(c); setCurrentPage(1); };
+  }, [setCurrentPage]);
 
-  const openAdd  = () => { setEditItem(null); setModalOpen(true); };
-  const openEdit = (item) => { setEditItem(item); setModalOpen(true); };
+  const handleSearch = useCallback((e) => { setSearch(e.target.value); setCurrentPage(1); }, [setCurrentPage, setSearch]);
+  const handleStatusFilter = useCallback((s) => { setStatusFilter(s); setCurrentPage(1); }, [setCurrentPage, setStatusFilter]);
+  const handleCampusFilter = useCallback((c) => { setCampusFilter(c); setCurrentPage(1); }, [setCurrentPage, setCampusFilter]);
 
-  const handleSave = (data) => {
+  const openAdd = useCallback(() => { setEditItem(null); setModalOpen(true); }, []);
+  const openEdit = useCallback((item) => { setEditItem(item); setModalOpen(true); }, []);
+
+  const handleSave = useCallback((data) => {
     if (editItem) onUpdate(editItem.id, data); else onAdd(data);
     setModalOpen(false);
-  };
+  }, [editItem, onAdd, onUpdate]);
 
-  const handleDelete = (id) => { onDelete(id); setDeleteConfirm(null); };
+  const handleDelete = useCallback((id) => { onDelete(id); setDeleteConfirm(null); }, [onDelete]);
 
-  const exportCSV = () => {
+  const exportCSV = useCallback(() => {
     const headers = ["Category", "Device Type", ...columns.map((c) => c.label)];
     const rows = filtered.map((item) => [
       item.category, item.deviceType || item.name,
       ...columns.map((c) => item[c.key] || "")
     ]);
-    const csv  = [headers, ...rows].map((r) => r.map((c) => `"${c || ""}"`).join(",")).join("\n");
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${c || ""}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a"); a.href = url; a.download = `ict-inventory-${Date.now()}.csv`; a.click();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ict-inventory-${Date.now()}.csv`;
+    a.click();
     URL.revokeObjectURL(url);
-  };
+  }, [columns, filtered]);
 
   const SortIcon = ({ col }) => {
     if (sortConfig.key !== col) return <span className="sort-icon inactive">↕</span>;
@@ -314,16 +331,14 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
             <table className="inv-table">
               <thead>
                 <tr>
-                  {/* Fixed: Category + Device Type columns */}
                   <th onClick={() => handleSort("category")} className="sortable-th">
                     Category <SortIcon col="category" />
                   </th>
                   <th onClick={() => handleSort("deviceType")} className="sortable-th">
                     Device Type <SortIcon col="deviceType" />
                   </th>
-                  {/* Dynamic columns based on selected category */}
                   {columns
-                    .filter((c) => c.key !== "status") // status rendered last always
+                    .filter((c) => c.key !== "status")
                     .map(({ key, label }) => (
                       <th key={key} onClick={() => handleSort(key)} className="sortable-th">
                         {label} <SortIcon col={key} />
@@ -346,21 +361,18 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
                       style={{ animationDelay: `${idx * 20}ms` }}
                       onClick={() => setDrawerItem(item)}
                     >
-                      {/* Category */}
                       <td>
                         <div className="item-name-cell">
                           <span className="item-cat-icon">{m.icon}</span>
                           <span className="item-name" style={{ color: "#800020", fontWeight: 700 }}>{item.category}</span>
                         </div>
                       </td>
-                      {/* Device Type */}
                       <td>
                         <span style={{ fontWeight: 600, color: "#2b0f19" }}>{item.deviceType || item.name}</span>
                       </td>
-                      {/* Dynamic data cells */}
                       {columns
                         .filter((c) => c.key !== "status")
-                        .map(({ key, label }) => {
+                        .map(({ key }) => {
                           const val = item[key];
                           if (key === "campus") {
                             return <td key={key}><span className="campus-tag">{val}</span></td>;
@@ -373,7 +385,6 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
                           }
                           return <td key={key} className={`${key}-cell`}>{val}</td>;
                         })}
-                      {/* Status — always last */}
                       <td>
                         <span
                           className="status-badge"
@@ -385,9 +396,9 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
                       </td>
                       <td>
                         <div className="action-btns" onClick={(e) => e.stopPropagation()}>
-                          <button className="btn-view"   onClick={() => setDrawerItem(item)} title="Details"  id={`btn-view-${item.id}`}>👁️</button>
-                          <button className="btn-edit"   onClick={() => openEdit(item)}       title="Edit"     id={`btn-edit-${item.id}`}>✏️</button>
-                          <button className="btn-qr"     onClick={() => setQrItem(item)}      title="QR Code" id={`btn-qr-${item.id}`}>📱</button>
+                          <button className="btn-view" onClick={() => setDrawerItem(item)} title="Details" id={`btn-view-${item.id}`}>👁️</button>
+                          <button className="btn-edit" onClick={() => openEdit(item)} title="Edit" id={`btn-edit-${item.id}`}>✏️</button>
+                          <button className="btn-qr" onClick={() => setQrItem(item)} title="QR Code" id={`btn-qr-${item.id}`}>📱</button>
                           <button className="btn-delete" onClick={() => setDeleteConfirm(item.id)} title="Delete" id={`btn-delete-${item.id}`}>🗑️</button>
                         </div>
                       </td>

@@ -87,6 +87,7 @@ function DropdownMenu({ group, selectedCategory, onSelectCategory, inventory, is
 export default function Topbar({
   selectedCategory, onSelectCategory, onHome, onDashboard, onSettings, onScannerOpen, onOpenPMChecklist,
   inventory = [], lastSynced, onSync, darkMode, onToggleDarkMode, activeView,
+  isAuthenticated = false, userEmail = "", onOpenSupabaseLogin, onSignOut,
 }) {
   const [openGroup, setOpenGroup] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -197,10 +198,20 @@ export default function Topbar({
           </button>
         )}
 
+        {isAuthenticated ? (
+          <button className="settings-btn" onClick={onSignOut} id="btn-signout" title={`Signed in as ${userEmail || "admin"}`}>
+            🚪
+          </button>
+        ) : (
+          <button className="settings-btn" onClick={onOpenSupabaseLogin} id="btn-admin-login" title="Admin Login">
+            🔐
+          </button>
+        )}
+
         <button className="settings-btn" onClick={onSettings} id="btn-settings" title="Settings">
           ⚙️
         </button>
-        <div className="topbar-avatar" title="Admin">A</div>
+        <div className="topbar-avatar" title={userEmail || "Admin"}>{(userEmail || "A").charAt(0).toUpperCase()}</div>
       </div>
 
       {/* ── Mobile hamburger ── */}

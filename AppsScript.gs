@@ -17,12 +17,36 @@ function doGet(e) {
     var params = e.parameter || {};
     var action = params.action;
 
-    // ── Ping / health check ──────────────────────────────────────────────────
     if (action === "ping") {
       return responseJSON({ ok: true, message: "Apps Script is online and operational!" });
     }
 
-    // ── Update a specific row in a specific tab ──────────────────────────────
+    if (action === "insertRow") {
+      var tabName = params.tabName || "";
+      var rawData = params.data;
+
+      if (!rawData) {
+        return responseJSON({ ok: false, error: "Missing data payload." });
+      }
+
+      var data = JSON.parse(rawData);
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var sheet = tabName ? ss.getSheetByName(tabName) : ss.getActiveSheet();
+
+      if (!sheet) {
+        return responseJSON({ ok: false, error: "Sheet tab '" + tabName + "' not found in the spreadsheet." });
+      }
+
+      var targetRow = sheet.getLastRow() + 1;
+      setRowValues(sheet, targetRow, data);
+
+      return responseJSON({
+        ok: true,
+        rowIndex: targetRow,
+        message: "Inserted new row at " + targetRow + " in '" + sheet.getName() + "'."
+      });
+    }
+
     if (action === "updateRow") {
       var rowIndex = parseInt(params.rowIndex, 10);
       var tabName  = params.tabName || "";
@@ -38,9 +62,6 @@ function doGet(e) {
 
       var data = JSON.parse(rawData);
       var ss   = SpreadsheetApp.getActiveSpreadsheet();
-
-      // Always target the specific tab by name — never rely on getActiveSheet()
-      // because the user may have a different tab open in Google Sheets.
       var sheet;
       if (tabName) {
         sheet = ss.getSheetByName(tabName);
@@ -48,11 +69,9 @@ function doGet(e) {
           return responseJSON({ ok: false, error: "Sheet tab '" + tabName + "' not found in the spreadsheet." });
         }
       } else {
-        // Fallback: use active sheet (less reliable — only for backward compat)
         sheet = ss.getActiveSheet();
       }
 
-      // Validate row bounds
       var lastRow = sheet.getLastRow();
       if (rowIndex < 2 || rowIndex > lastRow) {
         return responseJSON({
@@ -61,35 +80,41 @@ function doGet(e) {
         });
       }
 
-      // ── Column mapping (1-based) ─────────────────────────────────────────
-      // Col 1:  Device Type      Col 9:  RAM
-      // Col 2:  Campus           Col 10: OS
-      // Col 3:  Office Type      Col 11: Storage (Primary)
-      // Col 4:  Department       Col 12: Extra Disk
-      // Col 5:  User Type        Col 13: Asset Tag
-      // Col 6:  Year Purchased   Col 14: Assigned User
-      // Col 7:  Usage            Col 15: Status
-      // Col 8:  Processor        Col 16: Remarks
-      if (data.name         !== undefined) sheet.getRange(rowIndex, 1).setValue(data.name);
-      if (data.campus       !== undefined) sheet.getRange(rowIndex, 2).setValue(data.campus);
-      if (data.officeType   !== undefined) sheet.getRange(rowIndex, 3).setValue(data.officeType);
-      if (data.department   !== undefined) sheet.getRange(rowIndex, 4).setValue(data.department);
-      if (data.userType     !== undefined) sheet.getRange(rowIndex, 5).setValue(data.userType);
-      if (data.yearPurchased!== undefined) sheet.getRange(rowIndex, 6).setValue(data.yearPurchased);
-      if (data.usage        !== undefined) sheet.getRange(rowIndex, 7).setValue(data.usage);
-      if (data.processor    !== undefined) sheet.getRange(rowIndex, 8).setValue(data.processor);
-      if (data.ram          !== undefined) sheet.getRange(rowIndex, 9).setValue(data.ram);
-      if (data.os           !== undefined) sheet.getRange(rowIndex, 10).setValue(data.os);
-      if (data.storage      !== undefined) sheet.getRange(rowIndex, 11).setValue(data.storage);
-      if (data.storageExtra !== undefined) sheet.getRange(rowIndex, 12).setValue(data.storageExtra);
-      if (data.assetTag     !== undefined) sheet.getRange(rowIndex, 13).setValue(data.assetTag);
-      if (data.assignedUser !== undefined) sheet.getRange(rowIndex, 14).setValue(data.assignedUser);
-      if (data.status       !== undefined) sheet.getRange(rowIndex, 15).setValue(data.status);
-      if (data.remarks      !== undefined) sheet.getRange(rowIndex, 16).setValue(data.remarks);
+      setRowValues(sheet, rowIndex, data);
 
       return responseJSON({
         ok: true,
+        rowIndex: rowIndex,
         message: "Row " + rowIndex + " in '" + sheet.getName() + "' updated successfully."
+      });
+    }
+
+    if (action === "deleteRow") {
+      var deleteRowIndex = parseInt(params.rowIndex, 10);
+      var deleteTabName = params.tabName || "";
+
+      if (!deleteRowIndex || isNaN(deleteRowIndex)) {
+        return responseJSON({ ok: false, error: "Invalid or missing rowIndex." });
+      }
+
+      var ssDelete = SpreadsheetApp.getActiveSpreadsheet();
+      var sheetDelete = deleteTabName ? ssDelete.getSheetByName(deleteTabName) : ssDelete.getActiveSheet();
+
+      if (!sheetDelete) {
+        return responseJSON({ ok: false, error: "Sheet tab '" + deleteTabName + "' not found in the spreadsheet." });
+      }
+
+      var lastDeleteRow = sheetDelete.getLastRow();
+      if (deleteRowIndex < 2 || deleteRowIndex > lastDeleteRow) {
+        return responseJSON({ ok: false, error: "Row " + deleteRowIndex + " is out of bounds." });
+      }
+
+      sheetDelete.deleteRow(deleteRowIndex);
+
+      return responseJSON({
+        ok: true,
+        rowIndex: deleteRowIndex,
+        message: "Row " + deleteRowIndex + " in '" + sheetDelete.getName() + "' deleted successfully."
       });
     }
 
@@ -98,6 +123,25 @@ function doGet(e) {
   } catch (err) {
     return responseJSON({ ok: false, error: err.toString() });
   }
+}
+
+function setRowValues(sheet, rowIndex, data) {
+  if (data.name         !== undefined) sheet.getRange(rowIndex, 1).setValue(data.name);
+  if (data.campus       !== undefined) sheet.getRange(rowIndex, 2).setValue(data.campus);
+  if (data.officeType   !== undefined) sheet.getRange(rowIndex, 3).setValue(data.officeType);
+  if (data.department   !== undefined) sheet.getRange(rowIndex, 4).setValue(data.department);
+  if (data.userType     !== undefined) sheet.getRange(rowIndex, 5).setValue(data.userType);
+  if (data.yearPurchased!== undefined) sheet.getRange(rowIndex, 6).setValue(data.yearPurchased);
+  if (data.usage        !== undefined) sheet.getRange(rowIndex, 7).setValue(data.usage);
+  if (data.processor    !== undefined) sheet.getRange(rowIndex, 8).setValue(data.processor);
+  if (data.ram          !== undefined) sheet.getRange(rowIndex, 9).setValue(data.ram);
+  if (data.os           !== undefined) sheet.getRange(rowIndex, 10).setValue(data.os);
+  if (data.storage      !== undefined) sheet.getRange(rowIndex, 11).setValue(data.storage);
+  if (data.storageExtra !== undefined) sheet.getRange(rowIndex, 12).setValue(data.storageExtra);
+  if (data.assetTag     !== undefined) sheet.getRange(rowIndex, 13).setValue(data.assetTag);
+  if (data.assignedUser !== undefined) sheet.getRange(rowIndex, 14).setValue(data.assignedUser);
+  if (data.status       !== undefined) sheet.getRange(rowIndex, 15).setValue(data.status);
+  if (data.remarks      !== undefined) sheet.getRange(rowIndex, 16).setValue(data.remarks);
 }
 
 function responseJSON(obj) {

@@ -75,3 +75,66 @@ export async function pingAppsScript(appsScriptUrl) {
   if (!json.ok) throw new Error(json.error || "Ping failed");
   return json;
 }
+
+export async function insertSheetRow(appsScriptUrl, itemData, tabName) {
+  if (!appsScriptUrl) throw new Error("Apps Script URL not configured. Open ⚙️ Settings to add it.");
+
+  const params = new URLSearchParams({
+    action: "insertRow",
+    tabName: tabName || "",
+    data: JSON.stringify({
+      name: itemData.name || "",
+      campus: itemData.campus || "",
+      officeType: itemData.officeType || "",
+      department: itemData.department || "",
+      userType: itemData.userType || "",
+      yearPurchased: itemData.yearPurchased || "",
+      usage: itemData.usage || "",
+      processor: itemData.processor || "",
+      ram: itemData.ram || "",
+      os: itemData.os || "",
+      storage: itemData.storage || "",
+      storageExtra: itemData.storageExtra || "",
+      assetTag: itemData.assetTag || "",
+      assignedUser: itemData.assignedUser || "",
+      status: itemData.status || "Functional",
+      remarks: itemData.remarks || "",
+    }),
+  });
+
+  const url = `${appsScriptUrl}?${params.toString()}`;
+  const res = await fetch(url, { redirect: "follow" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const text = await res.text();
+  try {
+    const json = JSON.parse(text);
+    if (!json.ok) throw new Error(json.error || "Apps Script insert failed.");
+    return json;
+  } catch {
+    return { ok: true };
+  }
+}
+
+export async function deleteSheetRow(appsScriptUrl, sheetRowIndex, tabName) {
+  if (!appsScriptUrl) throw new Error("Apps Script URL not configured. Open ⚙️ Settings to add it.");
+
+  const params = new URLSearchParams({
+    action: "deleteRow",
+    rowIndex: String(sheetRowIndex),
+    tabName: tabName || "",
+  });
+
+  const url = `${appsScriptUrl}?${params.toString()}`;
+  const res = await fetch(url, { redirect: "follow" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const text = await res.text();
+  try {
+    const json = JSON.parse(text);
+    if (!json.ok) throw new Error(json.error || "Apps Script delete failed.");
+    return json;
+  } catch {
+    return { ok: true };
+  }
+}

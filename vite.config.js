@@ -23,4 +23,18 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/recharts')) return 'charts';
+          if (id.includes('node_modules/docx')) return 'docx';
+          if (id.includes('node_modules/jspdf') || id.includes('node_modules/html2canvas')) return 'pdf';
+          if (id.includes('node_modules/html5-qrcode') || id.includes('node_modules/qrcode.react')) return 'qr';
+          return undefined;
+        },
+      },
+    },
+  },
 })

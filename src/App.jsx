@@ -4,18 +4,20 @@ import HomePage from "./components/HomePage";
 import Dashboard from "./components/Dashboard";
 import InventoryTable from "./components/InventoryTable";
 import SettingsModal from "./components/SettingsModal";
+import SupabaseLoginModal from "./components/SupabaseLoginModal";
 import QRScanner from "./components/QRScanner";
 import Toast from "./components/Toast";
 import AIChat from "./components/AIChat";
 import PMChecklist from "./components/PMChecklist";
-import { useSheetInventory } from "./hooks/useSheetInventory";
+import { useSupabaseInventory } from "./hooks/useSupabaseInventory";
+import { supabase } from "./lib/supabase";
 import "./App.css";
 
 function LoadingScreen() {
   return (
     <div className="app-loading">
       <div className="loading-spinner" />
-      <p className="loading-text">Loading inventory from Google Sheets…</p>
+      <p className="loading-text">Loading inventory from Supabase…</p>
       <span className="loading-sub">Fetching live data</span>
     </div>
   );
@@ -41,13 +43,14 @@ function App() {
   const [view, setViewState] = useState(() => {
     return localStorage.getItem("ict_current_view") || "home";
   });
-  const [settingsOpen, setSettingsOpen]     = useState(false);
-  const [scannerOpen, setScannerOpen]       = useState(false);
-  const [toasts, setToasts]                 = useState([]);
-
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [toasts, setToasts] = useState([]);
   const [pmChecklistOpen, setPMChecklistOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
 
-  // Helper setters that also update localStorage
   const setView = (newView) => {
     setViewState(newView);
     localStorage.setItem("ict_current_view", newView);
@@ -62,25 +65,47 @@ function App() {
     }
   };
 
-  // Dark Mode state initialized from localStorage
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem("ict_theme") === "dark";
   });
 
-  // Apply data-theme attribute on document root whenever darkMode changes
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
     localStorage.setItem("ict_theme", darkMode ? "dark" : "light");
   }, [darkMode]);
 
+  useEffect(() => {
+    if (!supabase) return;
+
+    let active = true;
+
+    async function syncSession() {
+      const { data } = await supabase.auth.getSession();
+      if (!active) return;
+      const session = data?.session;
+      setIsAuthenticated(Boolean(session));
+      setUserEmail(session?.user?.email || "");
+    }
+
+    syncSession();
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(Boolean(session));
+      setUserEmail(session?.user?.email || "");
+    });
+
+    return () => {
+      active = false;
+      subscription?.subscription?.unsubscribe?.();
+    };
+  }, []);
+
   const toggleDarkMode = useCallback(() => {
     setDarkMode((prev) => !prev);
   }, []);
 
-  const { inventory, loading, error, lastSynced, refetch, addItem, updateItem, deleteItem } =
-    useSheetInventory();
+  const { inventory, loading, error, lastSynced, refetch, addItem, updateItem, deleteItem } = useSupabaseInventory();
 
-  // ── Toast helpers ──
   const addToast = useCallback((t) => {
     const id = ++toastIdCounter;
     setToasts((prev) => [...prev, { ...t, id }]);
@@ -91,17 +116,15 @@ function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  // ── Navigation ──
   const handleSelectCategory = (cat) => {
     setSelectedCategory(cat);
     setView("table");
   };
 
   const handleViewAllTable = () => { setSelectedCategory(null); setView("table"); };
-  const handleDashboard    = () => { setSelectedCategory(null); setView("dashboard"); };
-  const handleHome         = () => { setSelectedCategory(null); setView("home"); };
+  const handleDashboard = () => { setSelectedCategory(null); setView("dashboard"); };
+  const handleHome = () => { setSelectedCategory(null); setView("home"); };
 
-  // ── QR Scanner: "Find in Inventory" navigates to the matched category ──
   const handleFindFromQR = useCallback((parsed) => {
     setScannerOpen(false);
     const catName = parsed.category;
@@ -111,8 +134,15 @@ function App() {
     }
   }, []);
 
+  const handleSignOut = useCallback(async () => {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    setIsAuthenticated(false);
+    setUserEmail("");
+  }, []);
+
   if (loading) return <LoadingScreen />;
-  if (error)   return <ErrorScreen message={error} onRetry={refetch} />;
+  if (error) return <ErrorScreen message={error} onRetry={refetch} />;
 
   return (
     <div className="app-layout">
@@ -130,6 +160,10 @@ function App() {
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
         activeView={view}
+        isAuthenticated={isAuthenticated}
+        userEmail={userEmail}
+        onOpenSupabaseLogin={() => setLoginOpen(true)}
+        onSignOut={handleSignOut}
       />
 
       <main className={`app-content${view === "home" ? " app-content--home" : ""}`}>
@@ -163,6 +197,7 @@ function App() {
       </main>
 
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      {loginOpen && <SupabaseLoginModal onClose={() => setLoginOpen(false)} onAuthenticated={() => setLoginOpen(false)} />}
 
       {pmChecklistOpen && (
         <PMChecklist
@@ -171,7 +206,6 @@ function App() {
         />
       )}
 
-      {/* QR Scanner Modal */}
       {scannerOpen && (
         <QRScanner
           items={inventory}

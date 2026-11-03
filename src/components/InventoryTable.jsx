@@ -81,7 +81,7 @@ const ItemCard = React.memo(function ItemCard({ item, onView, onEdit, onDelete }
   );
 });
 
-export default function InventoryTable({ inventory, selectedCategory, onUpdate, onDelete, onAdd, onAddToast }) {
+export default function InventoryTable({ inventory, selectedCategory, onUpdate, onDelete, onAdd, onAddToast, onRequireAuth }) {
   const [search, setSearchState] = useState(() => {
     return localStorage.getItem("ict_table_search") || "";
   });
@@ -191,15 +191,29 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
   const handleStatusFilter = useCallback((s) => { setStatusFilter(s); setCurrentPage(1); }, [setCurrentPage, setStatusFilter]);
   const handleCampusFilter = useCallback((c) => { setCampusFilter(c); setCurrentPage(1); }, [setCurrentPage, setCampusFilter]);
 
-  const openAdd = useCallback(() => { setEditItem(null); setModalOpen(true); }, []);
-  const openEdit = useCallback((item) => { setEditItem(item); setModalOpen(true); }, []);
+  const openAdd = useCallback(() => {
+    if (onRequireAuth && !onRequireAuth()) return;
+    setEditItem(null);
+    setModalOpen(true);
+  }, [onRequireAuth]);
+
+  const openEdit = useCallback((item) => {
+    if (onRequireAuth && !onRequireAuth()) return;
+    setEditItem(item);
+    setModalOpen(true);
+  }, [onRequireAuth]);
 
   const handleSave = useCallback((data) => {
+    if (onRequireAuth && !onRequireAuth()) return;
     if (editItem) onUpdate(editItem.id, data); else onAdd(data);
     setModalOpen(false);
-  }, [editItem, onAdd, onUpdate]);
+  }, [editItem, onAdd, onUpdate, onRequireAuth]);
 
-  const handleDelete = useCallback((id) => { onDelete(id); setDeleteConfirm(null); }, [onDelete]);
+  const handleDelete = useCallback((id) => {
+    if (onRequireAuth && !onRequireAuth()) return;
+    onDelete(id);
+    setDeleteConfirm(null);
+  }, [onDelete, onRequireAuth]);
 
   const exportCSV = useCallback(() => {
     const headers = ["Category", "Device Type", ...columns.map((c) => c.label)];
@@ -451,6 +465,7 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
           onEdit={(item) => { setDrawerItem(null); openEdit(item); }}
           onDelete={(id) => { setDrawerItem(null); setDeleteConfirm(id); }}
           onAddToast={onAddToast || (() => {})}
+          onRequireAuth={onRequireAuth}
         />
       )}
 

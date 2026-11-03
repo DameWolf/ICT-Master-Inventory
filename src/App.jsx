@@ -40,6 +40,32 @@ function App() {
   const [selectedCategory, setSelectedCategoryState] = useState(() => {
     return localStorage.getItem("ict_selected_category") || null;
   });
+
+  const clearLegacyInventoryCache = useCallback(() => {
+    const staleKeys = [
+      "ict_inventory_data",
+      "ict_local_edits",
+      "ict_local_adds",
+      "ict_local_deletes",
+      "ict_table_search",
+      "ict_table_status_filter",
+      "ict_table_campus_filter",
+      "ict_table_page"
+    ];
+
+    staleKeys.forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // ignore localStorage issues
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    clearLegacyInventoryCache();
+  }, [clearLegacyInventoryCache]);
+
   const [view, setViewState] = useState(() => {
     return localStorage.getItem("ict_current_view") || "home";
   });
@@ -141,6 +167,14 @@ function App() {
     setUserEmail("");
   }, []);
 
+  const requireAuth = useCallback(() => {
+    if (!isAuthenticated) {
+      setLoginOpen(true);
+      return false;
+    }
+    return true;
+  }, [isAuthenticated]);
+
   if (loading) return <LoadingScreen />;
   if (error) return <ErrorScreen message={error} onRetry={refetch} />;
 
@@ -192,6 +226,7 @@ function App() {
             onDelete={deleteItem}
             onAdd={addItem}
             onAddToast={addToast}
+            onRequireAuth={requireAuth}
           />
         )}
       </main>

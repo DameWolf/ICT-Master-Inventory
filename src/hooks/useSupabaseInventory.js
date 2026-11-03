@@ -364,9 +364,23 @@ export function useSupabaseInventory() {
       throw new Error("No data returned from Google Sheets.");
     }
 
+    const dedupedRows = [];
+    const seenSheetKeys = new Set();
+
+    for (const row of rows) {
+      if (row.sheet_tab && row.sheet_row) {
+        const key = `${row.sheet_tab}::${row.sheet_row}`;
+        if (seenSheetKeys.has(key)) {
+          continue;
+        }
+        seenSheetKeys.add(key);
+      }
+      dedupedRows.push(row);
+    }
+
     const { error: upsertError } = await supabase
       .from(SUPABASE_TABLE)
-      .upsert(rows, { onConflict: "id" });
+      .upsert(dedupedRows, { onConflict: "sheet_tab,sheet_row" });
 
     if (upsertError) {
       throw upsertError;
@@ -402,8 +416,17 @@ export function useSupabaseInventory() {
 
     try {
       if (hasSupabaseConfig && supabase) {
-        await syncGoogleSheetsToSupabase();
-        await loadFromSupabase();
+        try {
+          await syncGoogleSheetsToSupabase();
+        } catch (syncError) {
+          console.warn("Supabase sheet sync failed, falling back to saved inventory data.", syncError);
+        }
+
+        try {
+          await loadFromSupabase();
+        } catch (loadError) {
+          throw loadError;
+        }
       } else {
         setInventory(getLocalStorageJSON("ict_inventory_data", []));
       }
@@ -441,6 +464,15 @@ export function useSupabaseInventory() {
 
       const saved = (data || [newItem]).map(mapDbRowToItem)[0];
       setInventory((prev) => [saved, ...prev]);
+
+      try {
+        if (getAppsScriptUrl()) {
+          await syncItemToGoogleSheets(saved);
+        }
+      } catch {
+        // Ignore sheet sync failures; Supabase remains the source of truth.
+      }
+
       return saved;
     }
 
@@ -468,6 +500,15 @@ export function useSupabaseInventory() {
       if (updateError) {
         throw updateError;
       }
+
+      const currentItem = inventory.find((item) => item.id === id);
+      try {
+        if (getAppsScriptUrl() && currentItem) {
+          await syncItemToGoogleSheets({ ...currentItem, ...updates, id });
+        }
+      } catch {
+        // Ignore Apps Script sync failures; the database is still the primary store.
+      }
     } else {
       try {
         const currentItem = inventory.find((item) => item.id === id);
@@ -489,14 +530,14 @@ export function useSupabaseInventory() {
       if (deleteError) {
         throw deleteError;
       }
-    }
 
-    const item = inventory.find((entry) => entry.id === id);
-    if (item && getAppsScriptUrl()) {
-      try {
-        await deleteSheetRow(getAppsScriptUrl(), item.sheetRow, item.sheetTab || item.tabCategory || item.category);
-      } catch {
-        // ignore write-back delete failure; local UI still removes item from the view
+      const item = inventory.find((entry) => entry.id === id);
+      if (item && getAppsScriptUrl()) {
+        try {
+          await deleteSheetRow(getAppsScriptUrl(), item.sheetRow, item.sheetTab || item.tabCategory || item.category);
+        } catch {
+          // ignore write-back delete failure; local UI still removes item from the view
+        }
       }
     }
 

@@ -101,7 +101,7 @@ function EditField({
 /* ─────────────────────────────────────────────────────────────
    ItemDetailDrawer
 ───────────────────────────────────────────────────────────── */
-export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelete, onAddToast }) {
+export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelete, onAddToast, onRequireAuth }) {
   if (!item) return null;
 
   const [isEditing, setIsEditing] = useState(false);
@@ -115,6 +115,7 @@ export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelet
   const curStatColor = STATUS_COLORS[cur.status] || "#64748b";
 
   const startEdit = () => {
+    if (onRequireAuth && !onRequireAuth()) return;
     setEditValues({
       name:          item.name          || "",
       campus:        item.campus         || "",
@@ -143,6 +144,7 @@ export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelet
   }, []);
 
   const handleSave = async () => {
+    if (onRequireAuth && !onRequireAuth()) return;
     setSaving(true);
     const updatedItem  = { ...item, ...editValues };
     onLocalUpdate(item.id, editValues);             // optimistic update
@@ -171,7 +173,10 @@ export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelet
     }
   };
 
-  const handleDelete = () => { onDelete(item.id); onClose(); };
+  const handleDelete = () => {
+    if (onRequireAuth && !onRequireAuth()) return;
+    onDelete(item.id); onClose();
+  };
 
   const fp = { isEditing, editValues, onChange: handleChange };
 

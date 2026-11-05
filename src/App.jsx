@@ -37,8 +37,14 @@ function ErrorScreen({ message, onRetry }) {
 let toastIdCounter = 0;
 
 function App() {
+  const APP_CACHE_BUSTER = "ict_app_cache_v2_supabase_only_2026_11_05";
+
   const [selectedCategory, setSelectedCategoryState] = useState(() => {
-    return localStorage.getItem("ict_selected_category") || null;
+    try {
+      return localStorage.getItem("ict_selected_category") || null;
+    } catch {
+      return null;
+    }
   });
 
   const clearLegacyInventoryCache = useCallback(() => {
@@ -50,7 +56,16 @@ function App() {
       "ict_table_search",
       "ict_table_status_filter",
       "ict_table_campus_filter",
-      "ict_table_page"
+      "ict_table_page",
+      "ict_current_view",
+      "ict_selected_category",
+      "ict_theme",
+      "ict_sync_last_run",
+      "ict_dashboard_summary",
+      "ict_last_inventory_snapshot",
+      "ict_app_cache_buster",
+      "ict_app_state",
+      "sheets_inventory_snapshot"
     ];
 
     staleKeys.forEach((key) => {
@@ -60,14 +75,31 @@ function App() {
         // ignore localStorage issues
       }
     });
-  }, []);
+
+    try {
+      localStorage.setItem("ict_app_cache_buster", APP_CACHE_BUSTER);
+    } catch {
+      // ignore localStorage issues
+    }
+  }, [APP_CACHE_BUSTER]);
 
   useEffect(() => {
-    clearLegacyInventoryCache();
-  }, [clearLegacyInventoryCache]);
+    try {
+      const currentBuster = localStorage.getItem("ict_app_cache_buster");
+      if (currentBuster !== APP_CACHE_BUSTER) {
+        clearLegacyInventoryCache();
+      }
+    } catch {
+      // ignore localStorage issues
+    }
+  }, [APP_CACHE_BUSTER, clearLegacyInventoryCache]);
 
   const [view, setViewState] = useState(() => {
-    return localStorage.getItem("ict_current_view") || "home";
+    try {
+      return localStorage.getItem("ict_current_view") || "home";
+    } catch {
+      return "home";
+    }
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);

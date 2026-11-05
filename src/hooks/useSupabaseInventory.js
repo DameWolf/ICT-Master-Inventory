@@ -415,27 +415,19 @@ export function useSupabaseInventory() {
     setError(null);
 
     try {
-      if (hasSupabaseConfig && supabase) {
-        try {
-          await syncGoogleSheetsToSupabase();
-        } catch (syncError) {
-          console.warn("Supabase sheet sync failed, falling back to saved inventory data.", syncError);
-        }
-
-        try {
-          await loadFromSupabase();
-        } catch (loadError) {
-          throw loadError;
-        }
-      } else {
-        setInventory(getLocalStorageJSON("ict_inventory_data", []));
+      if (!hasSupabaseConfig || !supabase) {
+        throw new Error("Supabase is not configured. Please add your environment variables.");
       }
+
+      await loadFromSupabase();
+      return true;
     } catch (err) {
       setError(err.message || "Failed to load inventory data.");
+      return false;
     } finally {
       setLoading(false);
     }
-  }, [loadFromSupabase, syncGoogleSheetsToSupabase]);
+  }, [loadFromSupabase]);
 
   useEffect(() => {
     refetch();
@@ -470,52 +462,39 @@ export function useSupabaseInventory() {
           await syncItemToGoogleSheets(saved);
         }
       } catch {
-        // Ignore sheet sync failures; Supabase remains the source of truth.
+        // Ignore sheet sync retries; live database is the source of truth.
       }
 
       return saved;
     }
 
-    try {
-      await syncItemToGoogleSheets({ ...newItem, sheetTab: newItem.category || item.category });
-    } catch {
-      // Ignore sheet sync failures here; the UI still keeps the local state for client-side edits.
-    }
-
-    setInventory((prev) => [newItem, ...prev]);
-    localStorage.setItem("ict_inventory_data", JSON.stringify([newItem, ...getLocalStorageJSON("ict_inventory_data", [])]));
-    return newItem;
+    throw new Error("Please log in as an admin to add inventory items.");
   }, []);
 
   const updateItem = useCallback(async (id, updates) => {
     const nextItem = { id, ...updates };
     const isAdmin = await isSupabaseAdmin();
 
-    if (supabase && isAdmin) {
-      const { error: updateError } = await supabase
-        .from(SUPABASE_TABLE)
-        .update(mapItemToDb(nextItem))
-        .eq("id", id);
+    if (!supabase || !isAdmin) {
+      throw new Error("Please log in as an admin to edit inventory items.");
+    }
 
-      if (updateError) {
-        throw updateError;
-      }
+    const { error: updateError } = await supabase
+      .from(SUPABASE_TABLE)
+      .update(mapItemToDb(nextItem))
+      .eq("id", id);
 
-      const currentItem = inventory.find((item) => item.id === id);
-      try {
-        if (getAppsScriptUrl() && currentItem) {
-          await syncItemToGoogleSheets({ ...currentItem, ...updates, id });
-        }
-      } catch {
-        // Ignore Apps Script sync failures; the database is still the primary store.
-      }
-    } else {
-      try {
-        const currentItem = inventory.find((item) => item.id === id);
+    if (updateError) {
+      throw updateError;
+    }
+
+    const currentItem = inventory.find((item) => item.id === id);
+    try {
+      if (getAppsScriptUrl() && currentItem) {
         await syncItemToGoogleSheets({ ...currentItem, ...updates, id });
-      } catch {
-        // Ignore sheet sync failures so the app remains usable without a configured Apps Script endpoint.
       }
+    } catch {
+      // Ignore Apps Script sync failures; Supabase remains authoritative.
     }
 
     setInventory((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
@@ -525,19 +504,21 @@ export function useSupabaseInventory() {
   const deleteItem = useCallback(async (id) => {
     const isAdmin = await isSupabaseAdmin();
 
-    if (supabase && isAdmin) {
-      const { error: deleteError } = await supabase.from(SUPABASE_TABLE).delete().eq("id", id);
-      if (deleteError) {
-        throw deleteError;
-      }
+    if (!supabase || !isAdmin) {
+      throw new Error("Please log in as an admin to delete inventory items.");
+    }
 
-      const item = inventory.find((entry) => entry.id === id);
-      if (item && getAppsScriptUrl()) {
-        try {
-          await deleteSheetRow(getAppsScriptUrl(), item.sheetRow, item.sheetTab || item.tabCategory || item.category);
-        } catch {
-          // ignore write-back delete failure; local UI still removes item from the view
-        }
+    const { error: deleteError } = await supabase.from(SUPABASE_TABLE).delete().eq("id", id);
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    const item = inventory.find((entry) => entry.id === id);
+    if (item && getAppsScriptUrl()) {
+      try {
+        await deleteSheetRow(getAppsScriptUrl(), item.sheetRow, item.sheetTab || item.tabCategory || item.category);
+      } catch {
+        // Ignore sheet sync failures; Supabase drives the UI.
       }
     }
 

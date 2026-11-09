@@ -433,6 +433,62 @@ export function useSupabaseInventory() {
     refetch();
   }, [refetch]);
 
+  useEffect(() => {
+    if (!supabase) {
+      return undefined;
+    }
+
+    const channel = supabase
+      .channel("inventory_items_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: SUPABASE_TABLE },
+        async () => {
+          try {
+            await refetch();
+          } catch {
+            // ignore refresh failures; the next poll will recover
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
+
+  useEffect(() => {
+    if (!supabase) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const syncGoogleSheetsPeriodically = async () => {
+      try {
+        const admin = await isSupabaseAdmin();
+        if (!admin || cancelled) return;
+        await syncGoogleSheetsToSupabase();
+        if (!cancelled) {
+          await loadFromSupabase();
+        }
+      } catch {
+        // silent retry loop; the UI will continue to work even if Sheets are temporarily unavailable
+      }
+    };
+
+    syncGoogleSheetsPeriodically();
+    const intervalId = setInterval(() => {
+      syncGoogleSheetsPeriodically();
+    }, 30000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [loadFromSupabase, syncGoogleSheetsToSupabase]);
+
   const addItem = useCallback(async (item) => {
     const newItem = {
       ...item,

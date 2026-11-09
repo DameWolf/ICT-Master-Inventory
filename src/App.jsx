@@ -162,7 +162,17 @@ function App() {
     setDarkMode((prev) => !prev);
   }, []);
 
-  const { inventory, loading, error, lastSynced, refetch, addItem, updateItem, deleteItem } = useSupabaseInventory();
+  const {
+    inventory,
+    loading,
+    error,
+    lastSynced,
+    refetch,
+    addItem,
+    updateItem,
+    deleteItem,
+    syncGoogleSheetsToSupabase,
+  } = useSupabaseInventory();
 
   const addToast = useCallback((t) => {
     const id = ++toastIdCounter;
@@ -208,7 +218,10 @@ function App() {
   }, [isAuthenticated]);
 
   if (loading) return <LoadingScreen />;
-  if (error) return <ErrorScreen message={error} onRetry={refetch} />;
+  if (error) return <ErrorScreen message={error} onRetry={async () => {
+    await syncGoogleSheetsToSupabase();
+    await refetch();
+  }} />;
 
   return (
     <div className="app-layout">
@@ -222,7 +235,10 @@ function App() {
         onOpenPMChecklist={() => setPMChecklistOpen(true)}
         inventory={inventory}
         lastSynced={lastSynced}
-        onSync={refetch}
+        onSync={async () => {
+          await syncGoogleSheetsToSupabase();
+          await refetch();
+        }}
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
         activeView={view}

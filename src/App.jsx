@@ -9,7 +9,7 @@ import QRScanner from "./components/QRScanner";
 import Toast from "./components/Toast";
 import AIChat from "./components/AIChat";
 import PMChecklist from "./components/PMChecklist";
-import { useSupabaseInventory } from "./hooks/useSupabaseInventory";
+import { useSheetInventory } from "./hooks/useSheetInventory";
 import { supabase } from "./lib/supabase";
 import "./App.css";
 
@@ -47,7 +47,7 @@ function LoadingScreen() {
   return (
     <div className="app-loading">
       <div className="loading-spinner" />
-      <p className="loading-text">Loading inventory from Supabase…</p>
+      <p className="loading-text">Loading inventory from Google Sheets…</p>
       <span className="loading-sub">Fetching live data</span>
     </div>
   );
@@ -67,7 +67,7 @@ function ErrorScreen({ message, onRetry }) {
 let toastIdCounter = 0;
 
 function App() {
-  const APP_CACHE_BUSTER = "ict_app_cache_v2_supabase_only_2026_11_05";
+  const APP_CACHE_BUSTER = "ict_app_cache_v2_google_sheets_primary_2026_11_09";
 
   const [selectedCategory, setSelectedCategoryState] = useState(() => {
     return safeStorageGet("ict_selected_category");
@@ -169,17 +169,7 @@ function App() {
     setDarkMode((prev) => !prev);
   }, []);
 
-  const {
-    inventory,
-    loading,
-    error,
-    lastSynced,
-    refetch,
-    addItem,
-    updateItem,
-    deleteItem,
-    syncGoogleSheetsToSupabase,
-  } = useSupabaseInventory();
+  const { inventory, loading, error, lastSynced, refetch, addItem, updateItem, deleteItem } = useSheetInventory();
 
   const addToast = useCallback((t) => {
     const id = ++toastIdCounter;
@@ -225,10 +215,7 @@ function App() {
   }, [isAuthenticated]);
 
   if (loading) return <LoadingScreen />;
-  if (error) return <ErrorScreen message={error} onRetry={async () => {
-    await syncGoogleSheetsToSupabase();
-    await refetch();
-  }} />;
+  if (error) return <ErrorScreen message={error} onRetry={refetch} />;
 
   return (
     <div className="app-layout">
@@ -242,10 +229,7 @@ function App() {
         onOpenPMChecklist={() => setPMChecklistOpen(true)}
         inventory={inventory}
         lastSynced={lastSynced}
-        onSync={async () => {
-          await syncGoogleSheetsToSupabase();
-          await refetch();
-        }}
+        onSync={refetch}
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
         activeView={view}

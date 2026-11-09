@@ -19,7 +19,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // ── Config ──────────────────────────────────────────────────
 const WATCH_PATHS   = ["src", "public", "index.html", "vite.config.js"];
 const IGNORE        = [/node_modules/, /\.git/, /dist/, /\.DS_Store/];
-const DEBOUNCE_MS   = 30_000;   // wait 30s of silence before committing
+const DEBOUNCE_MS   = 5_000;   // wait 5s of silence before committing
 const BRANCH        = "main";
 // ────────────────────────────────────────────────────────────
 

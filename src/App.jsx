@@ -13,6 +13,36 @@ import { useSupabaseInventory } from "./hooks/useSupabaseInventory";
 import { supabase } from "./lib/supabase";
 import "./App.css";
 
+function safeStorageGet(key, fallback = null) {
+  try {
+    if (typeof window === "undefined") return fallback;
+    const value = window.localStorage.getItem(key);
+    return value ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function safeStorageSet(key, value) {
+  try {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(key, value);
+    }
+  } catch {
+    // ignore storage access issues
+  }
+}
+
+function safeStorageRemove(key) {
+  try {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    // ignore storage access issues
+  }
+}
+
 function LoadingScreen() {
   return (
     <div className="app-loading">
@@ -40,11 +70,7 @@ function App() {
   const APP_CACHE_BUSTER = "ict_app_cache_v2_supabase_only_2026_11_05";
 
   const [selectedCategory, setSelectedCategoryState] = useState(() => {
-    try {
-      return localStorage.getItem("ict_selected_category") || null;
-    } catch {
-      return null;
-    }
+    return safeStorageGet("ict_selected_category");
   });
 
   const clearLegacyInventoryCache = useCallback(() => {
@@ -68,38 +94,19 @@ function App() {
       "sheets_inventory_snapshot"
     ];
 
-    staleKeys.forEach((key) => {
-      try {
-        localStorage.removeItem(key);
-      } catch {
-        // ignore localStorage issues
-      }
-    });
-
-    try {
-      localStorage.setItem("ict_app_cache_buster", APP_CACHE_BUSTER);
-    } catch {
-      // ignore localStorage issues
-    }
+    staleKeys.forEach((key) => safeStorageRemove(key));
+    safeStorageSet("ict_app_cache_buster", APP_CACHE_BUSTER);
   }, [APP_CACHE_BUSTER]);
 
   useEffect(() => {
-    try {
-      const currentBuster = localStorage.getItem("ict_app_cache_buster");
-      if (currentBuster !== APP_CACHE_BUSTER) {
-        clearLegacyInventoryCache();
-      }
-    } catch {
-      // ignore localStorage issues
+    const currentBuster = safeStorageGet("ict_app_cache_buster");
+    if (currentBuster !== APP_CACHE_BUSTER) {
+      clearLegacyInventoryCache();
     }
   }, [APP_CACHE_BUSTER, clearLegacyInventoryCache]);
 
   const [view, setViewState] = useState(() => {
-    try {
-      return localStorage.getItem("ict_current_view") || "home";
-    } catch {
-      return "home";
-    }
+    return safeStorageGet("ict_current_view", "home");
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -111,25 +118,25 @@ function App() {
 
   const setView = (newView) => {
     setViewState(newView);
-    localStorage.setItem("ict_current_view", newView);
+    safeStorageSet("ict_current_view", newView);
   };
 
   const setSelectedCategory = (cat) => {
     setSelectedCategoryState(cat);
     if (cat) {
-      localStorage.setItem("ict_selected_category", cat);
+      safeStorageSet("ict_selected_category", cat);
     } else {
-      localStorage.removeItem("ict_selected_category");
+      safeStorageRemove("ict_selected_category");
     }
   };
 
   const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem("ict_theme") === "dark";
+    return safeStorageGet("ict_theme") === "dark";
   });
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
-    localStorage.setItem("ict_theme", darkMode ? "dark" : "light");
+    safeStorageSet("ict_theme", darkMode ? "dark" : "light");
   }, [darkMode]);
 
   useEffect(() => {

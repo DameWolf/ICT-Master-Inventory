@@ -83,3 +83,36 @@
   box-shadow: -6px -6px 12px #ffffff, 8px 8px 18px rgba(120, 30, 50, 0.3);
   color: #fff9e6;
 }
+
+/* ── Responsive layout adjustments ── */
+@media (max-width: 1024px) {
+  .app-layout {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .app-content {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0) + 12px);
+  }
+}
+
+@media (max-width: 768px) {
+  .app-content {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0) + 16px);
+  }
+}
+
+@media (max-width: 480px) {
+  .app-loading,
+  .app-error {
+    padding: 20px 16px;
+  }
+
+  .loading-text {
+    font-size: 15px;
+  }
+
+  .app-error h2 {
+    font-size: 20px;
+  }
+}

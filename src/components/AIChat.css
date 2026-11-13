@@ -416,7 +416,7 @@
   background: rgba(30, 11, 19, 0.88);
   color: #ffd700;
   border-color: rgba(212, 175, 55, 0.4);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* ── Messages ── */
@@ -1309,18 +1309,135 @@
   color: #ffd700 !important;
 }
 
-/* ── Responsive: smaller screens ── */
-@media (max-width: 480px) {
+/* ── Responsive: tablet / mobile ── */
+@media (max-width: 768px) {
   .ai-panel {
-    right: 12px;
+    right: 16px;
     bottom: 88px;
-    width: calc(100vw - 24px);
-    height: calc(100vh - 110px);
-    max-height: none;
+    width: min(92vw, 420px);
+    height: min(72vh, 560px);
+    max-height: 560px;
   }
 
-  .ai-fab {
-    right: 16px;
-    bottom: 20px;
+  .ai-panel-header {
+    padding: 12px 14px;
+  }
+
+  .ai-panel-body {
+    min-height: 0;
+  }
+
+  .ai-welcome {
+    padding-top: 16px;
+  }
+
+  .ai-bubble {
+    max-width: 88%;
+  }
+
+  .ai-voice-settings-row {
+    flex-wrap: wrap;
+  }
+
+  .ai-voice-select,
+  .ai-voice-rate-control {
+    max-width: none;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .ai-avatar-fab {
+    width: 58px;
+    height: 58px;
+    bottom: 18px;
+    right: 18px;
+  }
+
+  .ai-panel {
+    left: 10px;
+    right: 10px;
+    bottom: 80px;
+    width: auto;
+    height: min(78vh, 560px);
+    border-radius: 22px 22px 18px 18px;
+  }
+
+  .ai-panel-header {
+    padding: 10px 12px;
+  }
+
+  .ai-header-title {
+    font-size: 13px;
+  }
+
+  .ai-header-sub {
+    font-size: 9px;
+  }
+
+  .ai-header-actions {
+    gap: 2px;
+  }
+
+  .ai-icon-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .ai-suggest-chip {
+    font-size: 10px;
+    padding: 6px 10px;
+  }
+
+  .ai-message {
+    gap: 6px;
+  }
+
+  .ai-bubble {
+    max-width: 90%;
+  }
+
+  .ai-bubble-content {
+    padding: 10px 12px;
+    font-size: 12.5px;
+  }
+
+  .ai-panel-footer {
+    padding: 10px 10px 8px;
+  }
+
+  .ai-input-wrap {
+    gap: 6px;
+    align-items: flex-end;
+  }
+
+  .ai-input {
+    font-size: 12.5px;
+  }
+
+  .ai-send-btn,
+  .ai-mic-btn {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+  }
+
+  .ai-voice-settings {
+    padding: 10px 12px;
+  }
+
+  .ai-voice-settings-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ai-voice-label {
+    min-width: 0;
+  }
+
+  .ai-voice-select,
+  .ai-voice-rate-control {
+    width: 100%;
+    max-width: none;
   }
 }

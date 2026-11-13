@@ -16,6 +16,7 @@ export const supabase = hasSupabaseConfig
   : null;
 
 export const SUPABASE_TABLE = "inventory_items";
+export const SUPABASE_SERVICE_REQUESTS_TABLE = "service_requests";
 
 export async function getSupabaseSession() {
   if (!supabase) return null;

@@ -522,6 +522,28 @@
 /* ═══════════════════════════════════
    RESPONSIVE — mobile / tablet
 ═══════════════════════════════════ */
+@media (max-width: 768px) {
+  .qrs-backdrop {
+    padding: 10px;
+  }
+
+  .qrs-modal {
+    max-width: 460px;
+  }
+
+  .qrs-header {
+    padding: 16px 16px 12px;
+  }
+
+  .qrs-viewport {
+    min-height: 260px;
+  }
+
+  .scan-result {
+    padding: 16px;
+  }
+}
+
 @media (max-width: 600px) {
   .qrs-backdrop { padding: 0; align-items: flex-end; }
   .qrs-modal {
@@ -538,10 +560,40 @@
   .sr-grid { grid-template-columns: 1fr; }
   .sr-actions { flex-direction: column; }
   .scan-btn-find, .scan-btn-again { min-width: unset; }
+  .qrs-viewport { min-height: 220px; }
+}
+
+@media (max-width: 480px) {
+  .qrs-header { padding: 14px 14px 12px; }
+  .qrs-header-left { gap: 8px; }
+  .qrs-logo { width: 34px; height: 34px; }
+  .qrs-title { font-size: 14px; }
+  .qrs-sub { display: none; }
+  .qrs-mode-tabs { padding-left: 12px; padding-right: 12px; }
+  .qrs-tab { font-size: 12px; padding: 9px 10px; }
+  .qrs-viewport-wrap { padding: 12px; }
+  .qrs-cam-controls { right: 18px; bottom: 18px; }
+  .qrs-ctrl-btn { width: 36px; height: 36px; }
+  .scan-result {
+    padding: 14px;
+    gap: 12px;
+  }
+  .sr-header {
+    align-items: flex-start;
+  }
+  .sr-device-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .sr-asset-tag {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 @media (max-width: 380px) {
   .qrs-header { padding: 14px 14px 12px; }
   .qrs-logo   { width: 34px; height: 34px; }
   .qrs-title  { font-size: 14px; }
+  .qrs-tip { font-size: 11px; }
 }

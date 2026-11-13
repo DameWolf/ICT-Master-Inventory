@@ -430,6 +430,24 @@
   background: #fef2f2;
 }
 
+/* Service Request Button */
+.btn-service {
+  background: rgba(255, 215, 0, 0.12);
+  box-shadow: -2px -2px 5px #ffffff, 3px 3px 6px rgba(120, 30, 50, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-service:hover {
+  background: rgba(255, 215, 0, 0.22);
+  border-color: #ffd700;
+  transform: translateY(-1px);
+}
+
 /* ── Mobile Cards Grid ── */
 .cards-grid {
   display: none;
@@ -529,4 +547,118 @@
   .table-wrap { display: none; }
   .cards-grid { display: grid; }
   .inv-container { padding: 18px 16px; }
+}
+
+@media (max-width: 768px) {
+  .inv-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .inv-header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .btn-export,
+  .btn-add {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .inv-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-wrap {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .campus-filter-row {
+    width: 100%;
+  }
+
+  .campus-pill {
+    flex: 1 1 calc(50% - 8px);
+    justify-content: center;
+  }
+
+  .status-filters {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .status-filter-btn {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .inv-container {
+    padding: 14px 12px;
+  }
+
+  .inv-title {
+    font-size: 20px;
+  }
+
+  .inv-subtitle {
+    font-size: 12px;
+  }
+
+  .inv-header-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .campus-pill {
+    flex-basis: calc(50% - 6px);
+    padding-inline: 10px;
+  }
+
+  .status-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .item-card {
+    padding: 14px;
+  }
+
+  .item-card-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .item-card-actions {
+    flex-direction: column;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .page-btn {
+    min-width: 44px;
+    padding: 8px 10px;
+  }
+
+  .page-info {
+    width: 100%;
+    margin-left: 0;
+    text-align: center;
+  }
 }

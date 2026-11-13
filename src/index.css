@@ -28,6 +28,11 @@ html, body, #root {
   --accent-maroon: #800020;
   --topbar-bg: linear-gradient(135deg, #6b0019 0%, #800020 40%, #9E1B32 100%);
   --shadow-card: -5px -5px 12px #ffffff, 6px 6px 16px rgba(120, 30, 50, 0.08);
+
+  /* Responsive design breakpoints */
+  --bp-mobile: 480px;
+  --bp-tablet: 768px;
+  --bp-laptop: 1024px;
 }
 
 [data-theme="dark"] {
@@ -50,6 +55,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
   transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* Light Neumorphic Scrollbar with Maroon & Gold highlights */

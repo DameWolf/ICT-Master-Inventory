@@ -271,3 +271,39 @@
     .sidebar { width: 300px; min-width: 300px; }
   }
 }
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: min(84vw, 300px);
+    min-width: min(84vw, 300px);
+  }
+
+  .sidebar-header {
+    padding: 20px 16px 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: 86vw;
+    min-width: 86vw;
+  }
+
+  .sidebar-header {
+    padding: 18px 14px 16px;
+  }
+
+  .nav-item {
+    min-height: 42px;
+    padding: 10px 12px;
+  }
+
+  .nav-label {
+    font-size: 12px;
+  }
+
+  .sidebar-stats {
+    padding: 12px 12px;
+    gap: 6px;
+  }
+}

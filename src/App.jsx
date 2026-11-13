@@ -9,7 +9,9 @@ import QRScanner from "./components/QRScanner";
 import Toast from "./components/Toast";
 import AIChat from "./components/AIChat";
 import PMChecklist from "./components/PMChecklist";
+import ServiceRequestModal from "./components/ServiceRequestModal";
 import { useSheetInventory } from "./hooks/useSheetInventory";
+import useServiceRequests from "./hooks/useServiceRequests";
 import { supabase } from "./lib/supabase";
 import "./App.css";
 
@@ -113,8 +115,28 @@ function App() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [pmChecklistOpen, setPMChecklistOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
+  const [serviceRequestOpen, setServiceRequestOpen] = useState(false);
+  const [serviceRequestTargetItem, setServiceRequestTargetItem] = useState(null);
+  const { serviceRequests, addServiceRequest, updateServiceRequest } = useServiceRequests();
+
+  const handleServiceRequestStatusChange = useCallback(async (requestId, nextStatus) => {
+    if (!requestId || !nextStatus) return;
+
+    try {
+      await updateServiceRequest(requestId, { status: nextStatus });
+      addToast({
+        type: "success",
+        message: `Service request status updated to ${nextStatus}.`,
+        duration: 3000,
+      });
+    } catch (err) {
+      addToast({
+        type: "error",
+        message: err?.message || "Could not update request status.",
+        duration: 4000,
+      });
+    }
+  }, [addToast, updateServiceRequest]);
 
   const setView = (newView) => {
     setViewState(newView);
@@ -214,6 +236,32 @@ function App() {
     return true;
   }, [isAuthenticated]);
 
+  const handleOpenServiceRequest = useCallback((item = null) => {
+    setServiceRequestTargetItem(item);
+    setServiceRequestOpen(true);
+  }, []);
+
+  const handleServiceRequestSubmit = useCallback(async (request) => {
+    try {
+      const saved = await addServiceRequest(request);
+      addToast({
+        type: "success",
+        message: `Service request ${saved.id} submitted successfully.`,
+        duration: 4000,
+      });
+    } catch (err) {
+      addToast({
+        type: "error",
+        message: err?.message || "Service request could not be saved.",
+        duration: 4000,
+      });
+    }
+  }, [addServiceRequest, addToast]);
+
+  useEffect(() => {
+    safeStorageSet("ict_service_requests_v1", JSON.stringify(serviceRequests));
+  }, [serviceRequests]);
+
   if (loading) return <LoadingScreen />;
   if (error) return <ErrorScreen message={error} onRetry={refetch} />;
 
@@ -227,6 +275,7 @@ function App() {
         onSettings={() => setSettingsOpen(true)}
         onScannerOpen={() => setScannerOpen(true)}
         onOpenPMChecklist={() => setPMChecklistOpen(true)}
+        onOpenServiceRequest={handleOpenServiceRequest}
         inventory={inventory}
         lastSynced={lastSynced}
         onSync={refetch}
@@ -266,6 +315,7 @@ function App() {
             onAdd={addItem}
             onAddToast={addToast}
             onRequireAuth={requireAuth}
+            onOpenServiceRequest={handleOpenServiceRequest}
           />
         )}
       </main>
@@ -285,6 +335,20 @@ function App() {
           items={inventory}
           onClose={() => setScannerOpen(false)}
           onFindInInventory={handleFindFromQR}
+        />
+      )}
+
+      {serviceRequestOpen && (
+        <ServiceRequestModal
+          item={serviceRequestTargetItem}
+          inventory={inventory}
+          requests={serviceRequests}
+          onClose={() => {
+            setServiceRequestTargetItem(null);
+            setServiceRequestOpen(false);
+          }}
+          onSubmit={handleServiceRequestSubmit}
+          onStatusChange={handleServiceRequestStatusChange}
         />
       )}
 

@@ -83,7 +83,65 @@ create policy "Only admin users can delete inventory items"
 on public.inventory_items for delete
 using (public.is_admin());
 
--- To grant admin access, create a Supabase Auth user and set app_metadata.role = 'admin'.
--- Example:
---   update auth.users set raw_app_meta_data = jsonb_set(raw_app_meta_data, '{role}', '"admin"') where id = 'YOUR_USER_ID';
--- Or use Supabase Auth custom claims / custom user metadata for the same role check.
+create table if not exists public.service_requests (
+  id text primary key,
+  item_id bigint references public.inventory_items(id) on delete set null,
+  asset_name text,
+  request_type text not null default 'Hardware Fault',
+  priority text not null default 'Medium',
+  requester text not null,
+  department text,
+  campus text,
+  contact text,
+  room text,
+  issue_summary text not null,
+  preferred_date text,
+  notes text,
+  status text not null default 'Open' check (
+    status in ('Open', 'In Progress', 'Waiting for Parts', 'Resolved', 'Closed')
+  ),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists service_requests_status_idx
+  on public.service_requests (status);
+
+create index if not exists service_requests_item_id_idx
+  on public.service_requests (item_id);
+
+create or replace function public.update_service_request_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_service_request_updated_at on public.service_requests;
+create trigger trg_service_request_updated_at
+before update on public.service_requests
+for each row
+execute function public.update_service_request_updated_at();
+
+alter table public.service_requests enable row level security;
+
+create policy "Service requests are readable by anyone"
+on public.service_requests for select
+using (true);
+
+create policy "Anyone may submit a service request"
+on public.service_requests for insert
+with check (true);
+
+create policy "Only admin users may update service requests"
+on public.service_requests for update
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "Only admin users may delete service requests"
+on public.service_requests for delete
+using (public.is_admin());
+
+-- Optional: if you want a wider internal workflow later, add a dedicated
+-- requester_email, assigned_to, resolution_notes, and closed_at column.

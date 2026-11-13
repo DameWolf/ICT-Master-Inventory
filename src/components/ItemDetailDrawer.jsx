@@ -101,7 +101,7 @@ function EditField({
 /* ─────────────────────────────────────────────────────────────
    ItemDetailDrawer
 ───────────────────────────────────────────────────────────── */
-export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelete, onAddToast, onRequireAuth }) {
+export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelete, onAddToast, onRequireAuth, onOpenServiceRequest }) {
   if (!item) return null;
 
   const [isEditing, setIsEditing] = useState(false);
@@ -398,6 +398,14 @@ export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelet
           </div>
         ) : (
           <div className="drawer-actions">
+            <button
+              className="drawer-btn-service"
+              onClick={() => onOpenServiceRequest?.(item)}
+              id={`drawer-service-${item.id}`}
+              style={{ borderColor: catColor + "55", color: catColor }}
+            >
+              🛠️ Service Request
+            </button>
             <button
               className="drawer-btn-edit"
               onClick={startEdit}

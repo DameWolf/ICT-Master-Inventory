@@ -86,6 +86,7 @@ function DropdownMenu({ group, selectedCategory, onSelectCategory, inventory, is
 
 export default function Topbar({
   selectedCategory, onSelectCategory, onHome, onDashboard, onSettings, onScannerOpen, onOpenPMChecklist,
+  onOpenServiceRequest,
   inventory = [], lastSynced, onSync, darkMode, onToggleDarkMode, activeView,
   isAuthenticated = false, userEmail = "", onOpenSupabaseLogin, onSignOut,
 }) {
@@ -186,6 +187,18 @@ export default function Topbar({
           </button>
         )}
 
+        {/* Service Request button */}
+        {onOpenServiceRequest && (
+          <button
+            className="topbar-service-btn"
+            onClick={() => onOpenServiceRequest()}
+            id="btn-service-request"
+            title="Create service request"
+          >
+            🛠️ <span className="scanner-btn-label">Service</span>
+          </button>
+        )}
+
         {/* QR Scanner button */}
         {onScannerOpen && (
           <button
@@ -241,6 +254,16 @@ export default function Topbar({
               {cat.icon} {cat.name}
             </button>
           ))}
+          {onOpenPMChecklist && (
+            <button className="mobile-nav-item" onClick={() => { onOpenPMChecklist(); setMobileOpen(false); }}>
+              📋 PM Report
+            </button>
+          )}
+          {onOpenServiceRequest && (
+            <button className="mobile-nav-item mobile-service-btn" onClick={() => { onOpenServiceRequest(); setMobileOpen(false); }}>
+              🛠️ Service Request
+            </button>
+          )}
         </div>
       )}
     </header>

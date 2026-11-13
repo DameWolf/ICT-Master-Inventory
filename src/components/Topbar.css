@@ -421,6 +421,31 @@
   flex-shrink: 0;
 }
 
+/* ── Service Request Button ── */
+.topbar-service-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 215, 0, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  border-radius: 10px;
+  color: #ffd700;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  font-family: var(--font-heading, 'Outfit', sans-serif);
+  line-height: 1;
+}
+.topbar-service-btn:hover {
+  background: rgba(255, 215, 0, 0.22);
+  border-color: #ffd700;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.16);
+}
+
 /* ── Mobile ── */
 .mobile-menu-btn {
   display: none;
@@ -486,6 +511,14 @@
 }
 .mobile-scan-btn:hover { background: rgba(255,215,0,0.2) !important; }
 
+.mobile-service-btn {
+  background: rgba(255, 215, 0, 0.12) !important;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  color: #ffd700 !important;
+  border-radius: 10px;
+  font-weight: 800 !important;
+}
+
 @media (max-width: 1100px) {
   .topbar-nav { display: none; }
   .topbar-mini-stats { display: none; }
@@ -496,4 +529,42 @@
 
 @media (max-width: 820px) {
   .scanner-btn-label { display: none; }
+  .topbar {
+    padding: 0 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    padding-inline: 10px;
+  }
+
+  .mobile-menu-btn {
+    margin-left: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar {
+    height: 58px;
+    padding: 0 10px;
+  }
+
+  .topbar-brand {
+    margin-right: 8px;
+  }
+
+  .topbar-logo-img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .topbar-brand-name {
+    font-size: 12px;
+  }
+
+  .mobile-menu-btn {
+    margin-left: 4px;
+    padding: 6px;
+  }
 }

@@ -226,8 +226,53 @@
 
 .btn-modal-save:hover { transform: translateY(-2px); color: #ffd700; }
 
+@media (max-width: 768px) {
+  .item-modal {
+    width: min(94vw, 720px);
+    max-height: 86vh;
+  }
+
+  .modal-header,
+  .modal-form {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
 @media (max-width: 639px) {
-  .item-modal { width: 100%; border-radius: 22px 22px 0 0; }
-  .form-grid { grid-template-columns: 1fr; }
-  .form-group.span-2 { grid-column: span 1 !important; }
+  .item-modal {
+    width: 100%;
+    border-radius: 22px 22px 0 0;
+    max-height: 88vh;
+    margin-top: auto;
+  }
+
+  .modal-header {
+    padding-top: 20px;
+  }
+
+  .modal-title {
+    font-size: 18px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group.span-2 {
+    grid-column: span 1 !important;
+  }
+
+  .status-pills-row {
+    gap: 8px;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .btn-modal-cancel,
+  .btn-modal-save {
+    width: 100%;
+  }
 }

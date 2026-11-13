@@ -81,7 +81,7 @@ const ItemCard = React.memo(function ItemCard({ item, onView, onEdit, onDelete }
   );
 });
 
-export default function InventoryTable({ inventory, selectedCategory, onUpdate, onDelete, onAdd, onAddToast, onRequireAuth }) {
+export default function InventoryTable({ inventory, selectedCategory, onUpdate, onDelete, onAdd, onAddToast, onRequireAuth, onOpenServiceRequest }) {
   const [search, setSearchState] = useState(() => {
     return localStorage.getItem("ict_table_search") || "";
   });
@@ -413,6 +413,9 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
                           <button className="btn-view" onClick={() => setDrawerItem(item)} title="Details" id={`btn-view-${item.id}`}>👁️</button>
                           <button className="btn-edit" onClick={() => openEdit(item)} title="Edit" id={`btn-edit-${item.id}`}>✏️</button>
                           <button className="btn-qr" onClick={() => setQrItem(item)} title="QR Code" id={`btn-qr-${item.id}`}>📱</button>
+                          <button className="btn-service" onClick={() => onOpenServiceRequest?.(item)} title="Service Request" id={`btn-service-${item.id}`}>
+                            🛠️
+                          </button>
                           <button className="btn-delete" onClick={() => setDeleteConfirm(item.id)} title="Delete" id={`btn-delete-${item.id}`}>🗑️</button>
                         </div>
                       </td>
@@ -466,6 +469,7 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
           onDelete={(id) => { setDrawerItem(null); setDeleteConfirm(id); }}
           onAddToast={onAddToast || (() => {})}
           onRequireAuth={onRequireAuth}
+          onOpenServiceRequest={onOpenServiceRequest}
         />
       )}
 

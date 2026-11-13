@@ -156,6 +156,9 @@ function App() {
     return safeStorageGet("ict_theme") === "dark";
   });
 
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
     safeStorageSet("ict_theme", darkMode ? "dark" : "light");

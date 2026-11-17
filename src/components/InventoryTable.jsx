@@ -95,7 +95,7 @@ const safeStorageSet = (key, value) => {
       window.localStorage.setItem(key, String(value));
     }
   } catch {
-    // ignore blocked storage access
+    // ignore storage failures
   }
 };
 

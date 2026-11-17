@@ -81,18 +81,30 @@ const ItemCard = React.memo(function ItemCard({ item, onView, onEdit, onDelete }
   );
 });
 
+const safeStorageGet = (key, fallback = "") => {
+  try {
+    return typeof window !== "undefined" ? (window.localStorage.getItem(key) ?? fallback) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const safeStorageSet = (key, value) => {
+  try {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(key, String(value));
+    }
+  } catch {
+    // ignore blocked storage access
+  }
+};
+
 export default function InventoryTable({ inventory, selectedCategory, onUpdate, onDelete, onAdd, onAddToast, onRequireAuth, onOpenServiceRequest }) {
-  const [search, setSearchState] = useState(() => {
-    return localStorage.getItem("ict_table_search") || "";
-  });
-  const [statusFilter, setStatusFilterState] = useState(() => {
-    return localStorage.getItem("ict_table_status_filter") || "All";
-  });
-  const [campusFilter, setCampusFilterState] = useState(() => {
-    return localStorage.getItem("ict_table_campus_filter") || "All";
-  });
+  const [search, setSearchState] = useState(() => safeStorageGet("ict_table_search", ""));
+  const [statusFilter, setStatusFilterState] = useState(() => safeStorageGet("ict_table_status_filter", "All"));
+  const [campusFilter, setCampusFilterState] = useState(() => safeStorageGet("ict_table_campus_filter", "All"));
   const [currentPage, setCurrentPageState] = useState(() => {
-    const p = parseInt(localStorage.getItem("ict_table_page") || "1", 10);
+    const p = parseInt(safeStorageGet("ict_table_page", "1"), 10);
     return isNaN(p) || p < 1 ? 1 : p;
   });
 
@@ -107,23 +119,23 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
 
   const setSearch = useCallback((val) => {
     setSearchState(val);
-    localStorage.setItem("ict_table_search", val);
+    safeStorageSet("ict_table_search", val);
   }, []);
 
   const setStatusFilter = useCallback((val) => {
     setStatusFilterState(val);
-    localStorage.setItem("ict_table_status_filter", val);
+    safeStorageSet("ict_table_status_filter", val);
   }, []);
 
   const setCampusFilter = useCallback((val) => {
     setCampusFilterState(val);
-    localStorage.setItem("ict_table_campus_filter", val);
+    safeStorageSet("ict_table_campus_filter", val);
   }, []);
 
   const setCurrentPage = useCallback((val) => {
     const pageNum = typeof val === "function" ? val(currentPage) : val;
     setCurrentPageState(pageNum);
-    localStorage.setItem("ict_table_page", String(pageNum));
+    safeStorageSet("ict_table_page", String(pageNum));
   }, [currentPage]);
 
   const meta = useMemo(

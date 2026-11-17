@@ -32,7 +32,7 @@ function stripMarkdownForSpeech(text) {
   return text
     // Remove markdown tables entirely (they sound terrible spoken)
     .replace(/\|[^\n]+\|/g, "")
-    .replace(/\|-+[\|\-\s]+/g, "")
+    .replace(/\|-+[|-\s]+/g, "")
     // Remove markdown formatting
     .replace(/#{1,6}\s*/g, "")
     .replace(/\*\*(.*?)\*\*/g, "$1")
@@ -82,7 +82,6 @@ export function useVoice() {
       const available = synth.getVoices();
       if (available.length > 0) {
         setVoices(available);
-        // Auto-select a good default if none saved
         if (!selectedVoiceURI) {
           const preferred = available.find(
             (v) =>
@@ -99,10 +98,9 @@ export function useVoice() {
     };
 
     loadVoices();
-    // Chrome loads voices asynchronously
     synth.addEventListener("voiceschanged", loadVoices);
     return () => synth.removeEventListener("voiceschanged", loadVoices);
-  }, []);
+  }, [selectedVoiceURI]);
 
   // ── Persist settings changes ───────────────────────────────
   useEffect(() => {

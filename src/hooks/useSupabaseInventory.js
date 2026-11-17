@@ -304,15 +304,6 @@ function mapItemToDb(item) {
   };
 }
 
-function getLocalStorageJSON(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
 async function syncItemToGoogleSheets(item) {
   const appsScriptUrl = getAppsScriptUrl();
   if (!appsScriptUrl) {

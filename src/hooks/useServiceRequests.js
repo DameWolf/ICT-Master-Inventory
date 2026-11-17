@@ -28,7 +28,7 @@ function mapRowToRequest(row) {
     itemId: row.item_id != null && row.item_id !== "" ? String(row.item_id) : "",
     assetName: row.asset_name || row.assetName || "Unassigned asset",
     requestType: row.request_type || row.requestType || "Hardware Fault",
-    priority: row.priority || row.priority || "Medium",
+    priority: row.priority || "Medium",
     requester: row.requester || "",
     department: row.department || "",
     campus: row.campus || "Main",

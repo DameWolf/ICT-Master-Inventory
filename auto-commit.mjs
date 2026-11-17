@@ -17,14 +17,20 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ── Config ──────────────────────────────────────────────────
-const WATCH_PATHS   = ["src", "public", "index.html", "vite.config.js"];
-const IGNORE        = [/node_modules/, /\.git/, /dist/, /\.DS_Store/];
-const DEBOUNCE_MS   = 5_000;   // wait 5s of silence before committing
-const BRANCH        = "main";
+const WATCH_PATHS = ["src", "public", "index.html", "vite.config.js", "package.json", "README.md", ".gitignore"];
+const IGNORE = [/node_modules/, /\.git/, /dist/, /\.DS_Store/, /debug-browser\.js/, /debug-playwright\.mjs/, /debug\.spec\.js/];
+const DEBOUNCE_MS = 5_000;
+const BRANCH = (() => {
+  try {
+    return execSync("git rev-parse --abbrev-ref HEAD", { cwd: __dirname, encoding: "utf8" }).trim() || "main";
+  } catch {
+    return "main";
+  }
+})();
 // ────────────────────────────────────────────────────────────
 
-let debounceTimer   = null;
-const changedFiles  = new Set();
+let debounceTimer = null;
+const changedFiles = new Set();
 
 const colors = {
   reset:  "\x1b[0m",
@@ -58,13 +64,13 @@ function autoCommit() {
   }
 
   const fileList = [...changedFiles].slice(0, 5).join(", ");
-  const extra    = changedFiles.size > 5 ? ` +${changedFiles.size - 5} more` : "";
-  const now      = new Date().toLocaleString("en-PH", {
+  const extra = changedFiles.size > 5 ? ` +${changedFiles.size - 5} more` : "";
+  const now = new Date().toLocaleString("en-PH", {
     month: "short", day: "numeric",
     hour: "2-digit", minute: "2-digit", hour12: true,
   });
 
-  const message  = `auto: save ${now} — ${fileList}${extra}`;
+  const message = `auto: save ${now} — ${fileList}${extra}`;
 
   try {
     run("git add -A");
@@ -72,8 +78,13 @@ function autoCommit() {
     log("📦", colors.green, `Committed: ${colors.bold}${message}${colors.reset}`);
 
     log("🚀", colors.cyan, `Pushing to origin/${BRANCH}…`);
-    run(`git push origin ${BRANCH}`);
-    log("✅", colors.green, `${colors.bold}Pushed successfully!${colors.reset}`);
+    try {
+      run(`git push origin ${BRANCH}`);
+      log("✅", colors.green, `${colors.bold}Pushed successfully!${colors.reset}`);
+    } catch (pushErr) {
+      log("⚠️", colors.yellow, `Push skipped or failed: ${pushErr.message}`);
+      log("ℹ️", colors.dim, "You can run: git push origin " + BRANCH);
+    }
   } catch (err) {
     log("❌", colors.red, `Git error: ${err.message}`);
   }
@@ -97,8 +108,8 @@ console.log(`Debounce: ${DEBOUNCE_MS / 1000}s after last change`);
 console.log(`Branch  : ${BRANCH}${colors.reset}\n`);
 
 const watcher = chokidar.watch(WATCH_PATHS, {
-  cwd:        __dirname,
-  ignored:    IGNORE,
+  cwd: __dirname,
+  ignored: IGNORE,
   persistent: true,
   ignoreInitial: true,
   awaitWriteFinish: { stabilityThreshold: 500, pollInterval: 100 },

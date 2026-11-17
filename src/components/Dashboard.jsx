@@ -5,7 +5,7 @@ import {
   AreaChart, Area,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from "recharts";
-import { STATUS_COLORS, CATEGORIES, CAMPUSES } from "../data/inventoryData";
+import { CATEGORIES, CAMPUSES } from "../data/inventoryData";
 import logoImg from "../assets/logo.jpg";
 import "./Dashboard.css";
 

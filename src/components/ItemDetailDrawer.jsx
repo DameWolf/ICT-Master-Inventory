@@ -102,11 +102,15 @@ function EditField({
    ItemDetailDrawer
 ───────────────────────────────────────────────────────────── */
 export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelete, onAddToast, onRequireAuth, onOpenServiceRequest }) {
-  if (!item) return null;
-
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving]       = useState(false);
   const [editValues, setEditValues] = useState({});
+
+  const handleChange = useCallback((field, value) => {
+    setEditValues((prev) => ({ ...prev, [field]: value }));
+  }, []);
+
+  if (!item) return null;
 
   const meta        = getCategoryMeta(item.category);
   const catColor    = meta.color;
@@ -138,10 +142,6 @@ export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelet
   };
 
   const cancelEdit = () => { setEditValues({}); setIsEditing(false); };
-
-  const handleChange = useCallback((field, value) => {
-    setEditValues((prev) => ({ ...prev, [field]: value }));
-  }, []);
 
   const handleSave = async () => {
     if (onRequireAuth && !onRequireAuth()) return;

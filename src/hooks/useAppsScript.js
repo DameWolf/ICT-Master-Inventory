@@ -1,5 +1,3 @@
-import { useState, useEffect, useCallback } from "react";
-
 const LS_KEY = "ict_apps_script_url";
 
 export function getAppsScriptUrl() {

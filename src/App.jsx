@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, Component } from "react";
 import Topbar from "./components/Topbar";
 import HomePage from "./components/HomePage";
 import Dashboard from "./components/Dashboard";
@@ -68,6 +68,38 @@ function ErrorScreen({ message, onRetry }) {
 
 let toastIdCounter = 0;
 
+class AppErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, message: "" };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, message: error?.message || "Unexpected app error" };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("App runtime error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="app-error" role="alert">
+          <span className="error-icon">⚠️</span>
+          <h2>Application error</h2>
+          <p>{this.state.message}</p>
+          <button className="retry-btn" onClick={() => window.location.reload()}>
+            🔄 Reload
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 function App() {
   const APP_CACHE_BUSTER = "ict_app_cache_v2_google_sheets_primary_2026_11_09";
 
@@ -118,6 +150,16 @@ function App() {
   const [serviceRequestOpen, setServiceRequestOpen] = useState(false);
   const [serviceRequestTargetItem, setServiceRequestTargetItem] = useState(null);
   const { serviceRequests, addServiceRequest, updateServiceRequest } = useServiceRequests();
+
+  const addToast = useCallback((t) => {
+    const id = ++toastIdCounter;
+    setToasts((prev) => [...prev, { ...t, id }]);
+    return id;
+  }, []);
+
+  const dismissToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   const handleServiceRequestStatusChange = useCallback(async (requestId, nextStatus) => {
     if (!requestId || !nextStatus) return;
@@ -195,16 +237,6 @@ function App() {
   }, []);
 
   const { inventory, loading, error, lastSynced, refetch, addItem, updateItem, deleteItem } = useSheetInventory();
-
-  const addToast = useCallback((t) => {
-    const id = ++toastIdCounter;
-    setToasts((prev) => [...prev, { ...t, id }]);
-    return id;
-  }, []);
-
-  const dismissToast = useCallback((id) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
 
   const handleSelectCategory = (cat) => {
     setSelectedCategory(cat);
@@ -365,4 +397,10 @@ function App() {
   );
 }
 
-export default App;
+export default function AppRoot() {
+  return (
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
+  );
+}

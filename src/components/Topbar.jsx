@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { CATEGORIES, STATUS_COLORS } from "../data/inventoryData";
+import { CATEGORIES } from "../data/inventoryData";
 import logoImg from "../assets/logo.jpg";
 import "./Topbar.css";
 

@@ -227,7 +227,7 @@ const FAB_POS_KEY = "ict_ai_fab_pos";
 
 function getStoredFabPos() {
   try {
-    const data = localStorage.getItem(FAB_POS_KEY);
+    const data = window.localStorage.getItem(FAB_POS_KEY);
     if (data) {
       const parsed = JSON.parse(data);
       if (typeof parsed.x === "number" && typeof parsed.y === "number") {

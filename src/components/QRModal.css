@@ -6,7 +6,7 @@
 .qr-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 3000;
+  z-index: 10000;
   background: rgba(30, 8, 16, 0.7);
   backdrop-filter: blur(8px);
   display: flex;

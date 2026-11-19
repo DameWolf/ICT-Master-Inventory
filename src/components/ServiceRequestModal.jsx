@@ -72,7 +72,17 @@ export default function ServiceRequestModal({ item, inventory = [], requests = [
     return inventory.find((inv) => String(inv.id) === String(form.itemId)) || null;
   }, [form.itemId, inventory]);
 
-  const openRequestCount = requests.filter((req) => ["Open", "In Progress", "Waiting for Parts"].includes(req.status)).length;
+  const openRequestCount = requests.filter((req) => ["New", "Open", "Assigned", "In Progress", "Waiting for Parts"].includes(req.status)).length;
+  const selectedTicket = requests.find((req) => req.id === selectedTicketId) || null;
+
+  const filteredRequests = requests.filter((request) => {
+    const matchesStatus = statusFilter === "All" || request.status === statusFilter;
+    const matchesPriority = priorityFilter === "All" || request.priority === priorityFilter;
+    const haystack = [request.id, request.assetName, request.requester, request.department, request.issueSummary]
+      .join(" ")
+      .toLowerCase();
+    return matchesStatus && matchesPriority && haystack.includes(searchText.toLowerCase().trim());
+  });
 
   const updateForm = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -132,13 +142,6 @@ export default function ServiceRequestModal({ item, inventory = [], requests = [
     });
     onClose();
   };
-
-  const filteredRequests = requests.filter((request) => {
-    const matchesSearch = request.assetName.toLowerCase().includes(searchText.toLowerCase());
-    const matchesStatus = statusFilter === "All" || request.status === statusFilter;
-    const matchesPriority = priorityFilter === "All" || request.priority === priorityFilter;
-    return matchesSearch && matchesStatus && matchesPriority;
-  });
 
   return (
     <div className="modal-backdrop" onClick={onClose}>

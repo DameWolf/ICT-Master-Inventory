@@ -36,6 +36,10 @@ const defaultForm = {
 
 export default function ServiceRequestModal({ item, inventory = [], requests = [], onClose, onSubmit, onStatusChange }) {
   const [mode, setMode] = useState(item ? "new" : "list");
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [priorityFilter, setPriorityFilter] = useState("All");
+  const [selectedTicketId, setSelectedTicketId] = useState("");
   const [form, setForm] = useState(() => ({
     ...defaultForm,
     itemId: item?.id || "",
@@ -129,6 +133,13 @@ export default function ServiceRequestModal({ item, inventory = [], requests = [
     onClose();
   };
 
+  const filteredRequests = requests.filter((request) => {
+    const matchesSearch = request.assetName.toLowerCase().includes(searchText.toLowerCase());
+    const matchesStatus = statusFilter === "All" || request.status === statusFilter;
+    const matchesPriority = priorityFilter === "All" || request.priority === priorityFilter;
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="service-request-modal" onClick={(e) => e.stopPropagation()}>
@@ -168,9 +179,50 @@ export default function ServiceRequestModal({ item, inventory = [], requests = [
               </div>
             </div>
 
+            <div className="service-request-filters">
+              <div className="filter-group">
+                <label className="filter-label">Search:</label>
+                <input
+                  type="text"
+                  className="filter-input"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  placeholder="Search by asset name"
+                />
+              </div>
+
+              <div className="filter-group">
+                <label className="filter-label">Status:</label>
+                <select
+                  className="filter-select"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="All">All</option>
+                  {STATUSES.map((status) => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label className="filter-label">Priority:</label>
+                <select
+                  className="filter-select"
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value)}
+                >
+                  <option value="All">All</option>
+                  {PRIORITIES.map((priority) => (
+                    <option key={priority} value={priority}>{priority}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div className="service-request-table-wrap">
-              {requests.length === 0 ? (
-                <div className="empty-service-state">No service requests yet.</div>
+              {filteredRequests.length === 0 ? (
+                <div className="empty-service-state">No service requests match the criteria.</div>
               ) : (
                 <table className="service-request-table">
                   <thead>
@@ -182,8 +234,12 @@ export default function ServiceRequestModal({ item, inventory = [], requests = [
                     </tr>
                   </thead>
                   <tbody>
-                    {requests.slice(0, 8).map((request) => (
-                      <tr key={request.id}>
+                    {filteredRequests.slice(0, 8).map((request) => (
+                      <tr
+                        key={request.id}
+                        className={selectedTicketId === request.id ? "selected-ticket" : ""}
+                        onClick={() => setSelectedTicketId(request.id)}
+                      >
                         <td>{request.id}</td>
                         <td>{request.assetName}</td>
                         <td>

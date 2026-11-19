@@ -5,7 +5,7 @@ import {
   PROCESSOR_OPTIONS, RAM_OPTIONS, OS_OPTIONS, STORAGE_OPTIONS,
   OFFICE_TYPE_OPTIONS, DEPARTMENT_OPTIONS, YEAR_OPTIONS, DEVICE_TYPE_OPTIONS,
 } from "../data/specOptions";
-import { QRCard } from "./QRModal";
+import QRModal, { QRCard } from "./QRModal";
 import "./ItemDetailDrawer.css";
 import "./QRModal.css";
 
@@ -105,6 +105,7 @@ export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelet
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving]       = useState(false);
   const [editValues, setEditValues] = useState({});
+  const [showQRPreview, setShowQRPreview] = useState(false);
 
   const handleChange = useCallback((field, value) => {
     setEditValues((prev) => ({ ...prev, [field]: value }));
@@ -377,8 +378,20 @@ export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelet
         {!isEditing && (
           <div className="drawer-qr-panel">
             <div className="drawer-qr-label">📱 DEVICE QR CODE</div>
-            <QRCard item={cur} preset="standard" />
+            <button
+              type="button"
+              className="drawer-qr-preview"
+              onClick={() => setShowQRPreview(true)}
+              aria-label="Preview and print device QR sticker"
+              title="Open centered QR preview"
+            >
+              <QRCard item={cur} preset="standard" />
+            </button>
           </div>
+        )}
+
+        {showQRPreview && (
+          <QRModal item={cur} onClose={() => setShowQRPreview(false)} />
         )}
 
         {/* ── Action buttons ── */}

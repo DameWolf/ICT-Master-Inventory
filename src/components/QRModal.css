@@ -423,6 +423,31 @@
   box-shadow: 0 4px 12px rgba(128, 0, 32, 0.3);
 }
 
+/* Drawer — QR code open button */
+.drawer-qr-open-button {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid #d4af37;
+  background: #fffdf8;
+  color: #800020;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.drawer-qr-open-button:hover {
+  background: #800020;
+  color: #ffffff;
+  border-color: #800020;
+  transform: translateY(-1px);
+}
+
 /* Print media — hide everything except the card */
 @media print {
   .qr-modal-backdrop,

@@ -12,16 +12,22 @@ const MAX_API_HISTORY    = 20;    // last N messages sent to Gemini API per requ
 const ENV_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 export function getAIKey() {
-  // Use the env key first (baked in at build time); fall back to user-saved key
-  return ENV_API_KEY || localStorage.getItem(STORAGE_KEY_API) || "";
+  // Prefer the verified build-time key; fall back to a Settings key.
+  const envKey = ENV_API_KEY.trim();
+  return envKey || localStorage.getItem(STORAGE_KEY_API)?.trim() || "";
 }
 export function setAIKey(key) {
-  localStorage.setItem(STORAGE_KEY_API, key.trim());
+  const trimmedKey = key.trim();
+  if (trimmedKey) {
+    localStorage.setItem(STORAGE_KEY_API, trimmedKey);
+  } else {
+    localStorage.removeItem(STORAGE_KEY_API);
+  }
 }
 
 // Returns true if a key is available from ANY source (env OR localStorage)
 export function hasAnyAIKey() {
-  return Boolean(ENV_API_KEY || localStorage.getItem(STORAGE_KEY_API));
+  return Boolean(localStorage.getItem(STORAGE_KEY_API)?.trim() || ENV_API_KEY.trim());
 }
 
 // ── Message persistence ─────────────────────────────────────
@@ -282,10 +288,11 @@ export function useAIChat() {
 
       // Models to try in order of preference & compatibility
       const CANDIDATE_MODELS = [
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+        "gemini-2.0-flash",
         "gemini-flash-latest",
-        "gemini-2.0-flash-exp",
+        "gemini-pro-latest",
       ];
 
       const recentMessages = prevMessages.slice(-MAX_API_HISTORY);
@@ -327,17 +334,17 @@ export function useAIChat() {
           if (result) break;
         } catch (err) {
           lastErr = err;
-          const errText = err?.message || "";
-          // If it's a key error (401/403/API_KEY_INVALID), don't try other models
+          const errText = `${err?.message || ""} ${err?.status || ""}`;
           if (
             errText.includes("API_KEY") ||
             errText.includes("API key") ||
+            errText.includes("invalid key") ||
+            errText.includes("not valid") ||
             errText.includes("401") ||
             errText.includes("403")
           ) {
             throw err;
           }
-          // Otherwise, continue loop to try next model name
         }
       }
 
@@ -356,7 +363,6 @@ export function useAIChat() {
         );
       }
 
-      // Mark streaming done
       setMessages((prev) =>
         prev.map((m, i) =>
           i === prev.length - 1 ? { ...m, streaming: false } : m
@@ -364,17 +370,16 @@ export function useAIChat() {
       );
     } catch (err) {
       console.error("Gemini AI Error:", err);
-      const errText = err?.message || "";
+      const errText = `${err?.message || ""} ${err?.status || ""}`;
       const isKeyError =
         errText.includes("API_KEY") ||
         errText.includes("API key") ||
-        errText.includes("401") ||
-        errText.includes("403") ||
         errText.includes("invalid key") ||
-        errText.includes("not valid");
+        errText.includes("not valid") ||
+        errText.includes("401") ||
+        errText.includes("403");
 
       setError(isKeyError ? "bad_key" : "api_error");
-      // Remove optimistic AI placeholder, keep user message
       setMessages((prev) => {
         const last = prev[prev.length - 1];
         return last?.role === "assistant" && last?.streaming
@@ -397,5 +402,13 @@ export function useAIChat() {
     setIsLoading(false);
   }, []);
 
-  return { messages, isLoading, error, setError, sendMessage, clearChat, stopGeneration };
+  return {
+    messages,
+    isLoading,
+    error,
+    setError,
+    sendMessage,
+    clearChat,
+    stopGeneration,
+  };
 }

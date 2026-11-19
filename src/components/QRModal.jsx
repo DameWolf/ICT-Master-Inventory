@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { QRCodeSVG } from "qrcode.react";
 import logoImg from "../assets/logo.jpg";
 import { getCategoryMeta } from "../data/inventoryData";
@@ -191,7 +192,7 @@ export default function QRModal({ item, onClose }) {
     setTimeout(() => { w.focus(); w.print(); }, 300);
   };
 
-  return (
+  return createPortal(
     <div className="qr-modal-backdrop" onClick={onClose}>
       <div className="qr-modal" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
@@ -237,6 +238,7 @@ export default function QRModal({ item, onClose }) {
           Low-density QR code optimized for crisp printing on small device labels.
         </p>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

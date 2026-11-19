@@ -380,13 +380,13 @@ export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelet
             <div className="drawer-qr-label">📱 DEVICE QR CODE</div>
             <button
               type="button"
-              className="drawer-qr-preview"
+              className="drawer-qr-open-button"
               onClick={() => setShowQRPreview(true)}
               aria-label="Preview and print device QR sticker"
               title="Open centered QR preview"
             >
-              {/* <QRCard item={cur} preset="standard" /> */}
-              QR Code
+              <span>🔍</span>
+              <span>Preview QR Sticker</span>
             </button>
           </div>
         )}

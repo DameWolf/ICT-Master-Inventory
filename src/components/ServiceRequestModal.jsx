@@ -13,7 +13,7 @@ const REQUEST_TYPES = [
 ];
 
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
-const STATUSES = ["Open", "In Progress", "Waiting for Parts", "Resolved", "Closed"];
+const STATUSES = ["New", "Open", "Assigned", "In Progress", "Waiting for Parts", "Resolved", "Closed", "Cancelled"];
 
 const defaultForm = {
   itemId: "",

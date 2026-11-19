@@ -109,8 +109,12 @@ export default function ServiceRequestModal({ item, inventory = [], requests = [
       return;
     }
 
+    const now = new Date();
+    const year = now.getFullYear();
+    const sequence = String(Date.now()).slice(-6);
+
     const payload = {
-      id: `SR-${Date.now()}`,
+      id: `SR-${year}-${sequence}`,
       itemId: form.itemId || "",
       assetName: form.assetName || selectedAsset?.name || "Unassigned asset",
       requestType: form.requestType,

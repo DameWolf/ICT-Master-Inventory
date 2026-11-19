@@ -28,6 +28,10 @@ const defaultForm = {
   issueSummary: "",
   preferredDate: "",
   notes: "",
+  impact: "Low",
+  assignee: "",
+  dueDate: "",
+  resolutionNotes: "",
 };
 
 export default function ServiceRequestModal({ item, inventory = [], requests = [], onClose, onSubmit, onStatusChange }) {
@@ -105,6 +109,10 @@ export default function ServiceRequestModal({ item, inventory = [], requests = [
       issueSummary: trimmedIssue,
       preferredDate: form.preferredDate,
       notes: form.notes.trim(),
+      impact: form.impact,
+      assignee: form.assignee.trim(),
+      dueDate: form.dueDate,
+      resolutionNotes: form.resolutionNotes.trim(),
       status: "Open",
       createdAt: new Date().toISOString(),
     };
@@ -324,6 +332,49 @@ export default function ServiceRequestModal({ item, inventory = [], requests = [
                   value={form.assetName}
                   onChange={(e) => updateForm("assetName", e.target.value)}
                   placeholder="Asset / device name"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Impact</label>
+                <select
+                  className="form-input"
+                  value={form.impact}
+                  onChange={(e) => updateForm("impact", e.target.value)}
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Assignee</label>
+                <input
+                  className="form-input"
+                  value={form.assignee}
+                  onChange={(e) => updateForm("assignee", e.target.value)}
+                  placeholder="Person responsible"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Due date</label>
+                <input
+                  className="form-input"
+                  type="date"
+                  value={form.dueDate}
+                  onChange={(e) => updateForm("dueDate", e.target.value)}
+                />
+              </div>
+
+              <div className="form-group span-2">
+                <label className="form-label">Resolution notes</label>
+                <textarea
+                  className="form-input form-textarea"
+                  value={form.resolutionNotes}
+                  onChange={(e) => updateForm("resolutionNotes", e.target.value)}
+                  placeholder="Notes on how the issue was resolved"
                 />
               </div>
 

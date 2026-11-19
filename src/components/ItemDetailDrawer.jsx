@@ -5,7 +5,7 @@ import {
   PROCESSOR_OPTIONS, RAM_OPTIONS, OS_OPTIONS, STORAGE_OPTIONS,
   OFFICE_TYPE_OPTIONS, DEPARTMENT_OPTIONS, YEAR_OPTIONS, DEVICE_TYPE_OPTIONS,
 } from "../data/specOptions";
-import QRModal, { QRCard } from "./QRModal";
+import QRModal from "./QRModal";
 import "./ItemDetailDrawer.css";
 import "./QRModal.css";
 
@@ -385,7 +385,8 @@ export default function ItemDetailDrawer({ item, onClose, onLocalUpdate, onDelet
               aria-label="Preview and print device QR sticker"
               title="Open centered QR preview"
             >
-              <QRCard item={cur} preset="standard" />
+              {/* <QRCard item={cur} preset="standard" /> */}
+              QR Code
             </button>
           </div>
         )}

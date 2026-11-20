@@ -10,11 +10,9 @@ const WakeSpeechRecognition =
     : null;
 const WAKE_WORD_ENABLED_KEY = "ict_ai_wake_word_enabled";
 const WAKE_PATTERNS = [
-  /\bhey\s+ai\s+assistant\b/i,
-  /\bok(?:ay)?\s+ai\s+assistant\b/i,
-  /\bhey\s+assistant\b/i,
-  /\bok(?:ay)?\s+assistant\b/i,
-  /\bai\s+assistant\b/i,
+  /\bhey\s+rachel\b/i,
+  /\bok(?:ay)?\s+rachel\b/i,
+  /\brachel\b/i,
 ];
 
 const SUGGESTED_PROMPTS = [
@@ -871,7 +869,7 @@ export default function AIChat({ inventory, onOpenSettings }) {
               )}
               {sttSupported && wakeWordEnabled && (
                 <div className="ai-voice-compat-warn">
-                  👂 Wake mode active: say "Hey AI Assistant"
+                  👂 Wake mode active: say "Hey Rachel"
                 </div>
               )}
               {!elevenLabsAvailable && (

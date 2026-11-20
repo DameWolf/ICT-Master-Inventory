@@ -181,6 +181,7 @@ function computeProsodyForChunk(chunk, baseRate, expressive) {
 export function useVoice() {
   const elevenLabsApiKey = resolveElevenLabsApiKey();
   const elevenLabsAvailable = Boolean(elevenLabsApiKey);
+  const defaultElevenVoiceId = EMBEDDED_ELEVENLABS_VOICE_ID || "EXAVITQu4vr4xnSDxMaL";
 
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -202,10 +203,12 @@ export function useVoice() {
   const [speechEngine, setSpeechEngine] = useState(() => {
     const saved = loadVoiceSettings().speechEngine;
     if (saved === "elevenlabs" && elevenLabsAvailable) return "elevenlabs";
+    if (saved === "browser") return "browser";
+    if (elevenLabsAvailable) return "elevenlabs";
     return "browser";
   });
   const [elevenVoiceId, setElevenVoiceId] = useState(
-    () => loadVoiceSettings().elevenVoiceId || EMBEDDED_ELEVENLABS_VOICE_ID || ELEVENLABS_VOICE_PROFILES[0].id
+    () => loadVoiceSettings().elevenVoiceId || defaultElevenVoiceId || ELEVENLABS_VOICE_PROFILES[0].id
   );
   const [elevenStylePreset, setElevenStylePreset] = useState(
     () => loadVoiceSettings().elevenStylePreset || "balanced"

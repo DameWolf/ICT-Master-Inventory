@@ -9,6 +9,8 @@ import "./InventoryTable.css";
 
 const STATUSES = ["Functional", "For Upgrade", "For Replacement", "Defective"];
 const PAGE_SIZE = 15;
+const TABLE_RECENT_SEARCHES_KEY = "ict_table_recent_searches";
+const MAX_TABLE_RECENT_SEARCHES = 8;
 
 /* ─── Mobile Card ─── */
 const ItemCard = React.memo(function ItemCard({ item, onView, onEdit, onDelete }) {
@@ -99,14 +101,34 @@ const safeStorageSet = (key, value) => {
   }
 };
 
+const safeStorageGetJSON = (key, fallback = []) => {
+  try {
+    const raw = safeStorageGet(key, "");
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const persistRecentSearch = (term) => {
+  const value = String(term || "").trim();
+  if (!value || value.length < 2) return;
+
+  const existing = safeStorageGetJSON(TABLE_RECENT_SEARCHES_KEY, [])
+    .filter((x) => typeof x === "string" && x.trim());
+  const next = [value, ...existing.filter((x) => x.toLowerCase() !== value.toLowerCase())]
+    .slice(0, MAX_TABLE_RECENT_SEARCHES);
+  safeStorageSet(TABLE_RECENT_SEARCHES_KEY, JSON.stringify(next));
+};
+
 export default function InventoryTable({ inventory, selectedCategory, onUpdate, onDelete, onAdd, onAddToast, onRequireAuth, onOpenServiceRequest }) {
-  const [search, setSearchState] = useState(() => safeStorageGet("ict_table_search", ""));
-  const [statusFilter, setStatusFilterState] = useState(() => safeStorageGet("ict_table_status_filter", "All"));
-  const [campusFilter, setCampusFilterState] = useState(() => safeStorageGet("ict_table_campus_filter", "All"));
-  const [currentPage, setCurrentPageState] = useState(() => {
-    const p = parseInt(safeStorageGet("ict_table_page", "1"), 10);
-    return isNaN(p) || p < 1 ? 1 : p;
-  });
+  const [search, setSearchState] = useState("");
+  const [statusFilter, setStatusFilterState] = useState("All");
+  const [campusFilter, setCampusFilterState] = useState("All");
+  const [currentPage, setCurrentPageState] = useState(1);
+  const [recentSearches, setRecentSearches] = useState(() => safeStorageGetJSON(TABLE_RECENT_SEARCHES_KEY, []));
 
   const [sortConfig, setSortConfig] = useState({ key: "name", dir: "asc" });
   const [modalOpen, setModalOpen] = useState(false);
@@ -119,24 +141,25 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
 
   const setSearch = useCallback((val) => {
     setSearchState(val);
-    safeStorageSet("ict_table_search", val);
   }, []);
 
   const setStatusFilter = useCallback((val) => {
     setStatusFilterState(val);
-    safeStorageSet("ict_table_status_filter", val);
   }, []);
 
   const setCampusFilter = useCallback((val) => {
     setCampusFilterState(val);
-    safeStorageSet("ict_table_campus_filter", val);
   }, []);
 
   const setCurrentPage = useCallback((val) => {
     const pageNum = typeof val === "function" ? val(currentPage) : val;
     setCurrentPageState(pageNum);
-    safeStorageSet("ict_table_page", String(pageNum));
   }, [currentPage]);
+
+  const commitRecentSearch = useCallback((term) => {
+    persistRecentSearch(term);
+    setRecentSearches(safeStorageGetJSON(TABLE_RECENT_SEARCHES_KEY, []));
+  }, []);
 
   const meta = useMemo(
     () => selectedCategory ? getCategoryMeta(selectedCategory) : { color: "#800020", icon: "📦" },
@@ -200,6 +223,14 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
   }, [setCurrentPage]);
 
   const handleSearch = useCallback((e) => { setSearch(e.target.value); setCurrentPage(1); }, [setCurrentPage, setSearch]);
+  const handleSearchBlur = useCallback(() => {
+    commitRecentSearch(search);
+  }, [commitRecentSearch, search]);
+  const handleSearchKeyDown = useCallback((e) => {
+    if (e.key === "Enter") {
+      commitRecentSearch(search);
+    }
+  }, [commitRecentSearch, search]);
   const handleStatusFilter = useCallback((s) => { setStatusFilter(s); setCurrentPage(1); }, [setCurrentPage, setStatusFilter]);
   const handleCampusFilter = useCallback((c) => { setCampusFilter(c); setCurrentPage(1); }, [setCurrentPage, setCampusFilter]);
 
@@ -280,10 +311,34 @@ export default function InventoryTable({ inventory, selectedCategory, onUpdate, 
             placeholder="Search device, user, department, asset tag…"
             value={search}
             onChange={handleSearch}
+            onBlur={handleSearchBlur}
+            onKeyDown={handleSearchKeyDown}
+            list="inventory-recent-searches"
             id="search-input"
           />
+          <datalist id="inventory-recent-searches">
+            {recentSearches.map((q) => <option key={q} value={q} />)}
+          </datalist>
           {search && <button className="search-clear" onClick={() => { setSearch(""); setCurrentPage(1); }}>✕</button>}
         </div>
+
+        {recentSearches.length > 0 && (
+          <div className="recent-searches-row">
+            <span className="recent-searches-label">Recent searches:</span>
+            {recentSearches.slice(0, 6).map((term) => (
+              <button
+                key={term}
+                className="recent-search-chip"
+                onClick={() => {
+                  setSearch(term);
+                  setCurrentPage(1);
+                }}
+              >
+                {term}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Campus filter pills */}
         {availableCampuses.length > 1 && (

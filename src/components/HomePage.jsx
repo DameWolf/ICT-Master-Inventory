@@ -4,6 +4,31 @@ import logoImg from "../assets/logo.jpg";
 import bgExtended from "../assets/hero_it_extended_rectangular.png";
 import "./HomePage.css";
 
+const HOME_RECENT_SEARCHES_KEY = "ict_home_recent_searches";
+const MAX_HOME_RECENT_SEARCHES = 8;
+
+function getRecentHomeSearches() {
+  try {
+    const raw = window.localStorage.getItem(HOME_RECENT_SEARCHES_KEY);
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string" && x.trim()) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentHomeSearch(term) {
+  const q = String(term || "").trim();
+  if (!q || q.length < 2) return;
+  const existing = getRecentHomeSearches();
+  const next = [q, ...existing.filter((x) => x.toLowerCase() !== q.toLowerCase())].slice(0, MAX_HOME_RECENT_SEARCHES);
+  try {
+    window.localStorage.setItem(HOME_RECENT_SEARCHES_KEY, JSON.stringify(next));
+  } catch {
+    // ignore
+  }
+}
+
 export default function HomePage({
   inventory = [],
   onSelectCategory,
@@ -13,6 +38,7 @@ export default function HomePage({
   onBatchQrOpen,
 }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [recentSearches, setRecentSearches] = useState(() => getRecentHomeSearches());
   const [mousePos, setMousePos] = useState({ x: 50, y: 50, parallaxX: 0, parallaxY: 0 });
   const [tiltCards, setTiltCards] = useState({});
 
@@ -62,6 +88,11 @@ export default function HomePage({
         c.icon.includes(q)
     );
   }, [searchQuery]);
+
+  const handleSearchCommit = () => {
+    saveRecentHomeSearch(searchQuery);
+    setRecentSearches(getRecentHomeSearches());
+  };
 
   return (
     <div
@@ -166,11 +197,32 @@ export default function HomePage({
               placeholder="Filter categories…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onBlur={handleSearchCommit}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSearchCommit(); }}
+              list="home-recent-searches"
             />
+            <datalist id="home-recent-searches">
+              {recentSearches.map((q) => <option key={q} value={q} />)}
+            </datalist>
             {searchQuery && (
               <button className="es-clear" onClick={() => setSearchQuery("")}>✕</button>
             )}
           </div>
+
+          {recentSearches.length > 0 && (
+            <div className="home-recent-searches-row">
+              <span className="home-recent-searches-label">Recent:</span>
+              {recentSearches.slice(0, 6).map((q) => (
+                <button
+                  key={q}
+                  className="home-recent-search-chip"
+                  onClick={() => setSearchQuery(q)}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 3D Magnetic Category Cards Grid */}

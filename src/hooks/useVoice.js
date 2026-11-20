@@ -23,6 +23,52 @@ export const ELEVENLABS_VOICE_PROFILES = [
   { id: "TxGEqnHWrfWFTfGW9XjX", label: "Josh (Warm Male)" },
 ];
 
+export const ELEVENLABS_STYLE_PRESETS = [
+  { id: "balanced", label: "Balanced Assistant" },
+  { id: "friday-inspired", label: "Friday-Inspired (Original)" },
+  { id: "broadcast", label: "Broadcast / Report" },
+  { id: "warm", label: "Warm Conversational" },
+];
+
+function resolveElevenVoiceSettings(stylePreset, expressiveVoice) {
+  const preset = String(stylePreset || "balanced").toLowerCase();
+
+  if (preset === "friday-inspired") {
+    return {
+      stability: expressiveVoice ? 0.34 : 0.46,
+      similarity_boost: 0.82,
+      style: expressiveVoice ? 0.64 : 0.5,
+      use_speaker_boost: true,
+    };
+  }
+
+  if (preset === "broadcast") {
+    return {
+      stability: 0.6,
+      similarity_boost: 0.76,
+      style: 0.18,
+      use_speaker_boost: true,
+    };
+  }
+
+  if (preset === "warm") {
+    return {
+      stability: expressiveVoice ? 0.43 : 0.52,
+      similarity_boost: 0.74,
+      style: expressiveVoice ? 0.47 : 0.3,
+      use_speaker_boost: true,
+    };
+  }
+
+  // balanced
+  return {
+    stability: expressiveVoice ? 0.42 : 0.55,
+    similarity_boost: 0.78,
+    style: expressiveVoice ? 0.45 : 0.18,
+    use_speaker_boost: true,
+  };
+}
+
 function resolveElevenLabsApiKey() {
   const embedded = EMBEDDED_ELEVENLABS_API_KEY.trim();
   return embedded || ENV_ELEVENLABS_API_KEY.trim();
@@ -161,6 +207,9 @@ export function useVoice() {
   const [elevenVoiceId, setElevenVoiceId] = useState(
     () => loadVoiceSettings().elevenVoiceId || EMBEDDED_ELEVENLABS_VOICE_ID || ELEVENLABS_VOICE_PROFILES[0].id
   );
+  const [elevenStylePreset, setElevenStylePreset] = useState(
+    () => loadVoiceSettings().elevenStylePreset || "balanced"
+  );
 
   const recognitionRef = useRef(null);
   const utteranceRef = useRef(null);
@@ -213,8 +262,9 @@ export function useVoice() {
       autoSpeak,
       speechEngine,
       elevenVoiceId,
+      elevenStylePreset,
     });
-  }, [selectedVoiceURI, speechRate, expressiveVoice, autoSpeak, speechEngine, elevenVoiceId]);
+  }, [selectedVoiceURI, speechRate, expressiveVoice, autoSpeak, speechEngine, elevenVoiceId, elevenStylePreset]);
 
   // ── Speech-to-Text ─────────────────────────────────────────
   const startListening = useCallback(
@@ -351,12 +401,7 @@ export function useVoice() {
           body: JSON.stringify({
             text: chunk,
             model_id: DEFAULT_ELEVEN_MODEL_ID,
-            voice_settings: {
-              stability: expressiveVoice ? 0.42 : 0.55,
-              similarity_boost: 0.78,
-              style: expressiveVoice ? 0.45 : 0.18,
-              use_speaker_boost: true,
-            },
+            voice_settings: resolveElevenVoiceSettings(elevenStylePreset, expressiveVoice),
           }),
         });
 
@@ -375,7 +420,7 @@ export function useVoice() {
     } finally {
       setIsSpeaking(false);
     }
-  }, [elevenLabsApiKey, elevenVoiceId, expressiveVoice, playAudioBlob]);
+  }, [elevenLabsApiKey, elevenVoiceId, elevenStylePreset, expressiveVoice, playAudioBlob]);
 
   const speakWithBrowser = useCallback((text) => {
     if (!synth) return;
@@ -521,8 +566,11 @@ export function useVoice() {
     setSpeechEngine,
     elevenVoiceId,
     setElevenVoiceId,
+    elevenStylePreset,
+    setElevenStylePreset,
     elevenLabsAvailable,
     elevenLabsProfiles: ELEVENLABS_VOICE_PROFILES,
+    elevenLabsStylePresets: ELEVENLABS_STYLE_PRESETS,
   };
 }
 

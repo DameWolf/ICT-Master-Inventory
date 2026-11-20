@@ -7,10 +7,12 @@ const STORAGE_KEY_PROVIDER = "ict_ai_provider";
 const STORAGE_KEY_OPENAI = "ict_ai_key_openai";
 const STORAGE_KEY_GEMINI = "ict_ai_key";
 const STORAGE_KEY_MSGS = "ict_ai_messages";
+const STORAGE_KEY_RECENT_AI_QUERIES = "ict_ai_recent_queries";
 const MAX_STORED_MSGS = 200; // max messages persisted to localStorage
 const MAX_API_HISTORY = 8; // last N messages sent to model API per request (smaller = faster)
 const MAX_CONTEXT_ROWS = 180; // cap row-level context to reduce token latency
 const VALID_REPLY_MODES = new Set(["technical", "executive", "brief", "report"]);
+const MAX_RECENT_AI_QUERIES = 8;
 
 // ── API Key helpers ─────────────────────────────────────────
 // Priority: env variable (baked in at build) → localStorage (user-configured)
@@ -99,6 +101,33 @@ function saveMessages(messages) {
   } catch {
     // Quota exceeded — silently skip
   }
+}
+
+function loadRecentAIQueries() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_RECENT_AI_QUERIES);
+    const parsed = JSON.parse(raw || "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((q) => typeof q === "string" && q.trim()).slice(0, MAX_RECENT_AI_QUERIES);
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentAIQuery(query) {
+  const q = String(query || "").trim();
+  if (q.length < 2) return;
+  const existing = loadRecentAIQueries();
+  const next = [q, ...existing.filter((x) => x.toLowerCase() !== q.toLowerCase())].slice(0, MAX_RECENT_AI_QUERIES);
+  try {
+    localStorage.setItem(STORAGE_KEY_RECENT_AI_QUERIES, JSON.stringify(next));
+  } catch {
+    // ignore
+  }
+}
+
+export function getRecentAIQueries() {
+  return loadRecentAIQueries();
 }
 
 // ── Inventory context builder ────────────────────────────────
@@ -526,15 +555,16 @@ async function* createGeminiStream({ apiKey, userText, systemPrompt, previousMes
 
 // ── Hook ─────────────────────────────────────────────────────
 export function useAIChat() {
-  // Load persisted messages on first mount
-  const [messages, setMessages] = useState(() => loadMessages());
+  // Messages are session-only so each app restart opens clean.
+  const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading]  = useState(false);
   const [error, setError]          = useState(null);
   const abortRef = useRef(false);
 
   // Persist messages to localStorage whenever they change
   useEffect(() => {
-    saveMessages(messages);
+    // Keep compatibility key clean so stale data doesn't reappear.
+    localStorage.removeItem(STORAGE_KEY_MSGS);
   }, [messages]);
 
   const sendMessage = useCallback(async (userText, inventory, options = {}) => {
@@ -552,6 +582,7 @@ export function useAIChat() {
       content: userText,
       timestamp: new Date(),
     };
+    saveRecentAIQuery(userText);
 
     // Snapshot current messages BEFORE adding the new user message
     const prevMessages = messages; // closure captures current state

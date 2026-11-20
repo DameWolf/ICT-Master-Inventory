@@ -102,6 +102,7 @@ class AppErrorBoundary extends Component {
 
 function App() {
   const APP_CACHE_BUSTER = "ict_app_cache_v2_google_sheets_primary_2026_11_09";
+  const SESSION_BOOTSTRAP_KEY = "ict_session_bootstrap_done";
 
   const [selectedCategory, setSelectedCategoryState] = useState(() => {
     return safeStorageGet("ict_selected_category");
@@ -138,6 +139,29 @@ function App() {
       clearLegacyInventoryCache();
     }
   }, [APP_CACHE_BUSTER, clearLegacyInventoryCache]);
+
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      const bootstrapped = window.sessionStorage.getItem(SESSION_BOOTSTRAP_KEY);
+      if (bootstrapped) return;
+
+      // Reset volatile UI/action state on a new browser session.
+      const volatileKeys = [
+        "ict_table_search",
+        "ict_table_status_filter",
+        "ict_table_campus_filter",
+        "ict_table_page",
+        "ict_current_view",
+        "ict_selected_category",
+        "ict_ai_messages",
+      ];
+      volatileKeys.forEach((k) => safeStorageRemove(k));
+      window.sessionStorage.setItem(SESSION_BOOTSTRAP_KEY, "1");
+    } catch {
+      // ignore storage failures
+    }
+  }, []);
 
   const [view, setViewState] = useState(() => {
     return safeStorageGet("ict_current_view", "home");

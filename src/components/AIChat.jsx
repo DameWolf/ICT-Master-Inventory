@@ -229,6 +229,7 @@ const REPLY_MODES = [
   { value: "executive", label: "Executive" },
   { value: "technical", label: "Technical" },
   { value: "brief", label: "Brief" },
+  { value: "report", label: "Report" },
 ];
 
 function getStoredFabPos() {

@@ -765,6 +765,9 @@
   border-radius: 999px;
   border: 1px solid rgba(212, 175, 55, 0.5);
   background: rgba(255, 255, 255, 0.72);
+  gap: 2px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .ai-reply-mode-btn {
@@ -773,10 +776,11 @@
   color: #7a5866;
   font-size: 10px;
   font-weight: 700;
-  padding: 4px 10px;
+  padding: 4px 9px;
   border-radius: 999px;
   cursor: pointer;
   transition: all 0.16s ease;
+  min-width: 62px;
 }
 
 .ai-reply-mode-btn:hover {
@@ -1545,6 +1549,16 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 6px;
+  }
+
+  .ai-reply-mode-switch {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .ai-reply-mode-btn {
+    min-width: 0;
+    flex: 1;
   }
 
   .ai-input {

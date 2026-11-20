@@ -10,7 +10,7 @@ const STORAGE_KEY_MSGS = "ict_ai_messages";
 const MAX_STORED_MSGS = 200; // max messages persisted to localStorage
 const MAX_API_HISTORY = 8; // last N messages sent to model API per request (smaller = faster)
 const MAX_CONTEXT_ROWS = 180; // cap row-level context to reduce token latency
-const VALID_REPLY_MODES = new Set(["technical", "executive", "brief"]);
+const VALID_REPLY_MODES = new Set(["technical", "executive", "brief", "report"]);
 
 // ── API Key helpers ─────────────────────────────────────────
 // Priority: env variable (baked in at build) → localStorage (user-configured)
@@ -325,6 +325,19 @@ function getReplyModeInstruction(mode) {
 - Use at most 3-6 bullets or a short paragraph.
 - Include only the most important metric(s) and conclusion.
 - Offer one optional follow-up question for deeper analysis.`;
+  }
+
+  if (normalized === "report") {
+    return `## ACTIVE RESPONSE MODE: REPORT
+- Produce a structured report for operational review.
+- Use this exact section order:
+  1) **Summary** (2-4 lines)
+  2) **Key Metrics Table** (Markdown table with Metric | Value | Insight)
+  3) **Findings** (3-6 concise bullets)
+  4) **Risks & Gaps** (2-4 bullets)
+  5) **Action Plan** (3 numbered actions with priority tags: High/Med/Low)
+- Include exact numbers from inventory context.
+- Keep language formal, clear, and implementation-focused.`;
   }
 
   return `## ACTIVE RESPONSE MODE: TECHNICAL

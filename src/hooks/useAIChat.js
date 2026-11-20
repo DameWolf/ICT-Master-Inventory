@@ -8,7 +8,8 @@ const STORAGE_KEY_OPENAI = "ict_ai_key_openai";
 const STORAGE_KEY_GEMINI = "ict_ai_key";
 const STORAGE_KEY_MSGS = "ict_ai_messages";
 const MAX_STORED_MSGS = 200; // max messages persisted to localStorage
-const MAX_API_HISTORY = 20; // last N messages sent to model API per request
+const MAX_API_HISTORY = 8; // last N messages sent to model API per request (smaller = faster)
+const MAX_CONTEXT_ROWS = 180; // cap row-level context to reduce token latency
 
 // ── API Key helpers ─────────────────────────────────────────
 // Priority: env variable (baked in at build) → localStorage (user-configured)
@@ -101,15 +102,10 @@ function saveMessages(messages) {
 
 // ── Inventory context builder ────────────────────────────────
 /**
- * Builds a rich, two-part context:
- *   1. Aggregate statistics (always included)
- *   2. Full device-level compact TSV (all items, token-efficient)
- *
- * This app includes both aggregate and item-level data to support precise
- * analytical answers and direct item lookups.
- * and gives the model the ability to answer precise per-item questions.
+ * Builds a fast context with aggregate stats always included, and row-level
+ * data included only when the query likely needs specific item lookup.
  */
-function buildInventoryContext(inventory) {
+function buildInventoryContext(inventory, userText = "") {
   if (!inventory || inventory.length === 0) return "No inventory data available.";
 
   const total = inventory.length;
@@ -219,25 +215,66 @@ function buildInventoryContext(inventory) {
     .map(([d, c]) => `  ${d}: ${c} units`)
     .join("\n");
 
-  // ── Full device-level data (compact TSV) ────────────────
+  const query = String(userText || "").toLowerCase();
+  const needsItemRows = /\b(which|list|show|find|specific|asset|tag|serial|model|devices?|items?)\b/.test(query);
+
+  const queryTerms = query
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 3)
+    .slice(0, 8);
+
+  const filteredRows = needsItemRows
+    ? inventory.filter((item) => {
+        if (queryTerms.length === 0) return true;
+        const haystack = [
+          item.assetTag,
+          item.category,
+          item.deviceType,
+          item.name,
+          item.status,
+          item.department,
+          item.campus,
+          item.yearPurchased,
+          item.brand,
+          item.model,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return queryTerms.some((term) => haystack.includes(term));
+      })
+    : [];
+
+  const selectedRows = (needsItemRows ? filteredRows : []).slice(0, MAX_CONTEXT_ROWS);
+
   const tsvHeader = "assetTag\tcategory\tdeviceType\tstatus\tdepartment\tcampus\tyearPurchased\tbrand\tmodel";
-  const tsvRows = inventory
+  const tsvRows = selectedRows
     .map((i) =>
       [
-        i.assetTag       || "",
-        i.category       || "",
-        i.deviceType     || i.name || "",
-        i.status         || "",
-        i.department     || "",
-        i.campus         || "",
-        i.yearPurchased  || "",
-        i.brand          || "",
-        i.model          || "",
+        i.assetTag || "",
+        i.category || "",
+        i.deviceType || i.name || "",
+        i.status || "",
+        i.department || "",
+        i.campus || "",
+        i.yearPurchased || "",
+        i.brand || "",
+        i.model || "",
       ]
         .map((v) => String(v).replace(/\t/g, " "))
         .join("\t")
     )
     .join("\n");
+
+  const rowSection = needsItemRows
+    ? `
+
+=== SCOPED DEVICE LIST (TAB-SEPARATED RECORDS) ===
+Matched rows: ${filteredRows.length} | Included rows: ${selectedRows.length} | Inventory total: ${total}
+${selectedRows.length < filteredRows.length ? "NOTE: Rows were truncated for speed. Ask to \"show more\" or refine filters (department/status/campus/brand)." : ""}
+${tsvHeader}
+${tsvRows}`
+    : "\n\n=== DEVICE LIST OMITTED FOR SPEED ===\nRow-level records are excluded for analytical questions. Ask for specific devices to include matching rows.";
 
   return `=== PRE-CALCULATED INVENTORY STATISTICS ===
 Total devices: ${total.toLocaleString()}
@@ -263,21 +300,18 @@ BY PURCHASE YEAR & AGE:
 ${yearLines || "  No year data available"}
 
 TOP DEVICE TYPES:
-${topDevTypes}
-
-=== FULL DEVICE LIST (TAB-SEPARATED RECORDS) ===
-${tsvHeader}
-${tsvRows}`;
+${topDevTypes}${rowSection}`;
 }
 
 // ── System prompt ────────────────────────────────────────────
 const SYSTEM_PROMPT = (context) => `You are an elite, highly accurate ICT Hardware Inventory Analyst & IT Asset Management Specialist for an educational institution. You have real-time access to the exact hardware inventory data provided below.
 
 ## ACCURACY & DATA-GROUNDING MANDATES
-1. **Zero Hallucination Policy**: Base ALL numerical counts, lists, asset tags, and statistics strictly on the provided PRE-CALCULATED INVENTORY STATISTICS and FULL DEVICE LIST.
+1. **Zero Hallucination Policy**: Base ALL numerical counts, lists, asset tags, and statistics strictly on the provided context sections.
 2. **Pre-Calculated Stats Primacy**: Always use the PRE-CALCULATED INVENTORY STATISTICS section for category, department, brand, and status counts to ensure 100% mathematical precision.
-3. **Specific Item Searches**: When asked for specific devices (e.g., "Which items are defective in IT Dept?"), search through the FULL DEVICE LIST table lines and list the actual assetTags, deviceTypes, brands, and models.
-4. **Honest Limitations**: If requested data (e.g. serial numbers, specific room numbers) is absent from the dataset, state clearly: "That specific detail is not present in the active inventory database."
+3. **Specific Item Searches**: When a SCOPED DEVICE LIST section is present, use it for item-level answers and list the assetTags, deviceTypes, brands, and models from that section only.
+4. **Truncation Honesty**: If SCOPED DEVICE LIST says rows were truncated, explicitly tell the user and ask whether to fetch a refined list (department/status/campus/brand) for complete item-level accuracy.
+5. **Honest Limitations**: If requested data (e.g. serial numbers, specific room numbers) is absent from the dataset, state clearly: "That specific detail is not present in the active inventory database."
 
 ## ANALYTICAL & COMPARATIVE CAPABILITIES
 When asked for insights, executive reports, or recommendations, provide deep analysis:
@@ -317,10 +351,10 @@ function toOpenAIHistory(messages) {
 
 async function* createOpenAIStream({ apiKey, userText, systemPrompt, previousMessages }) {
   const body = {
-    model: "gpt-4.1-mini",
+    model: "gpt-4o-mini",
     stream: true,
-    temperature: 0.2,
-    max_tokens: 1800,
+    temperature: 0.15,
+    max_tokens: 1000,
     messages: [
       { role: "system", content: systemPrompt },
       ...toOpenAIHistory(previousMessages),
@@ -412,8 +446,8 @@ async function* createGeminiStream({ apiKey, userText, systemPrompt, previousMes
       const chat = model.startChat({
         history,
         generationConfig: {
-          maxOutputTokens: 2048,
-          temperature: 0.2,
+          maxOutputTokens: 1000,
+          temperature: 0.15,
         },
       });
 
@@ -474,7 +508,7 @@ export function useAIChat() {
 
     try {
       // Build inventory context once per request
-      const context = buildInventoryContext(inventory);
+      const context = buildInventoryContext(inventory, userText);
       const systemPrompt = SYSTEM_PROMPT(context);
 
       // Add optimistic AI message placeholder

@@ -240,6 +240,7 @@ function getStoredFabPos() {
 
 export default function AIChat({ inventory, onOpenSettings }) {
   const [open, setOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [inputVal, setInputVal] = useState("");
   const [hasKey, setHasKey] = useState(() => hasAnyAIKey());
   const [fabPos, setFabPos] = useState(getStoredFabPos);
@@ -465,6 +466,7 @@ export default function AIChat({ inventory, onOpenSettings }) {
     : { cursor: isDragging ? "grabbing" : "grab", userSelect: "none", touchAction: "none" };
 
   const getPanelStyle = () => {
+    if (isExpanded) return {};
     if (!fabPos || !fabRef.current) return {};
     const rect = fabRef.current.getBoundingClientRect();
     const isBottomHalf = fabPos.y > window.innerHeight / 2;
@@ -516,7 +518,16 @@ export default function AIChat({ inventory, onOpenSettings }) {
 
       {/* Chat Panel */}
       {open && (
-        <div className="ai-panel" style={getPanelStyle()} ref={panelRef} role="dialog" aria-label="Chit the Chat Bot">
+        <>
+          {isExpanded && <div className="ai-panel-overlay" onClick={() => setIsExpanded(false)} aria-hidden="true" />}
+          <div
+            className={`ai-panel ${isExpanded ? "ai-panel--expanded" : ""}`}
+            style={getPanelStyle()}
+            ref={panelRef}
+            role="dialog"
+            aria-label="Chit the Chat Bot"
+            aria-modal={isExpanded ? "true" : "false"}
+          >
           {/* Header */}
           <div className="ai-panel-header">
             <div className="ai-header-left">
@@ -534,6 +545,14 @@ export default function AIChat({ inventory, onOpenSettings }) {
               </div>
             </div>
             <div className="ai-header-actions">
+              <button
+                className={`ai-icon-btn ${isExpanded ? "ai-icon-btn--active" : ""}`}
+                onClick={() => setIsExpanded((v) => !v)}
+                title={isExpanded ? "Restore size" : "Expand and center"}
+                aria-label={isExpanded ? "Restore chat size" : "Expand chat"}
+              >
+                {isExpanded ? "🗗" : "⛶"}
+              </button>
               {ttsSupported && (
                 <button
                   className={`ai-icon-btn ${voiceSettingsOpen ? "ai-icon-btn--active" : ""}`}
@@ -556,7 +575,10 @@ export default function AIChat({ inventory, onOpenSettings }) {
               )}
               <button
                 className="ai-icon-btn"
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  setOpen(false);
+                  setIsExpanded(false);
+                }}
                 title="Close"
                 aria-label="Close chat panel"
                 id="ai-chat-close"
@@ -770,7 +792,8 @@ export default function AIChat({ inventory, onOpenSettings }) {
               </p>
             </div>
           )}
-        </div>
+          </div>
+        </>
       )}
     </>
   );

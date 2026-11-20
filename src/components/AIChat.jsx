@@ -19,7 +19,7 @@ const SUGGESTED_PROMPTS = [
 
 function TypingIndicator() {
   return (
-    <div className="ai-typing-indicator" aria-label="Chit the Chat Bot is thinking">
+    <div className="ai-typing-indicator" aria-label="AI Assistant is thinking">
       <span />
       <span />
       <span />
@@ -160,8 +160,8 @@ function MessageBubble({ message, onReplay, isSpeakingThis, onStopSpeaking, ttsS
   return (
     <div className={`ai-message ${isUser ? "ai-message--user" : "ai-message--ai"}`}>
       {!isUser && (
-        <div className="ai-avatar" aria-label="Chit the Chat Bot">
-          <img src={aiRobotIcon} alt="Chit the Chat Bot" className="ai-avatar-robot-img" />
+        <div className="ai-avatar" aria-label="AI Assistant">
+          <img src={aiRobotIcon} alt="AI Assistant" className="ai-avatar-robot-img" />
         </div>
       )}
       <div className="ai-bubble">
@@ -203,7 +203,7 @@ function NoKeyScreen({ onOpenSettings }) {
   return (
     <div className="ai-nokey">
       <div className="ai-nokey-icon">🔑</div>
-      <h3>Set up Chit the Chat Bot</h3>
+      <h3>Set up AI Assistant</h3>
       <p>
         To use the AI assistant, add your API key in Settings (OpenAI or Google Gemini).
         Your key is stored only in this browser.
@@ -524,7 +524,7 @@ export default function AIChat({ inventory, onOpenSettings }) {
         style={fabStyle}
         onPointerDown={handlePointerDown}
         className={`ai-avatar-fab ${open ? "ai-avatar-fab--open" : ""} ${isDragging ? "ai-avatar-fab--dragging" : ""}`}
-        aria-label={open ? "Close Chit the Chat Bot" : "Open Chit the Chat Bot"}
+        aria-label={open ? "Close AI Assistant" : "Open AI Assistant"}
         id="ai-chat-fab"
         title="🤖 Drag me anywhere • Click to Ask Chit!"
       >
@@ -533,7 +533,7 @@ export default function AIChat({ inventory, onOpenSettings }) {
           {open ? (
             <span className="ai-avatar-close-icon">✕</span>
           ) : (
-            <img src={aiRobotIcon} alt="Chit the Chat Bot" className="ai-avatar-img" draggable={false} />
+            <img src={aiRobotIcon} alt="AI Assistant" className="ai-avatar-img" draggable={false} />
           )}
         </div>
         {!open && messages.length > 0 && (
@@ -550,17 +550,17 @@ export default function AIChat({ inventory, onOpenSettings }) {
             style={getPanelStyle()}
             ref={panelRef}
             role="dialog"
-            aria-label="Chit the Chat Bot"
+            aria-label="AI Assistant"
             aria-modal={isExpanded ? "true" : "false"}
           >
           {/* Header */}
           <div className="ai-panel-header">
             <div className="ai-header-left">
               <div className="ai-header-avatar">
-                <img src={aiRobotIcon} alt="Chit the Chat Bot" className="ai-header-robot-img" />
+                <img src={aiRobotIcon} alt="AI Assistant" className="ai-header-robot-img" />
               </div>
               <div>
-                <div className="ai-header-title">Chit the Chat Bot</div>
+                <div className="ai-header-title">AI Assistant</div>
                 <div className="ai-header-sub">
                   Powered by OpenAI or Google Gemini
                   {messages.length > 0 && (
@@ -745,9 +745,9 @@ export default function AIChat({ inventory, onOpenSettings }) {
                 {showSuggestions && (
                   <div className="ai-welcome">
                     <div className="ai-welcome-icon">
-                      <img src={aiRobotIcon} alt="Chit the Chat Bot" className="ai-welcome-robot-img" />
+                      <img src={aiRobotIcon} alt="AI Assistant" className="ai-welcome-robot-img" />
                     </div>
-                    <p className="ai-welcome-title">Hello! I'm Chit, your ICT inventory chatbot.</p>
+                    <p className="ai-welcome-title">Hello! I'm your AI Assistant for ICT inventory.</p>
                     <p className="ai-welcome-sub">
                       Ask me anything about your {inventory?.length?.toLocaleString() || "–"} devices. Try a suggestion:
                     </p>
@@ -781,7 +781,7 @@ export default function AIChat({ inventory, onOpenSettings }) {
                     {isLoading && messages[messages.length - 1]?.role === "user" && (
                       <div className="ai-message ai-message--ai">
                         <div className="ai-avatar">
-                          <img src={aiRobotIcon} alt="Chit the Chat Bot" className="ai-avatar-robot-img" />
+                          <img src={aiRobotIcon} alt="AI Assistant" className="ai-avatar-robot-img" />
                         </div>
                         <div className="ai-bubble">
                           <div className="ai-bubble-content">

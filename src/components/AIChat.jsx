@@ -224,6 +224,12 @@ function NoKeyScreen({ onOpenSettings }) {
 }
 
 const FAB_POS_KEY = "ict_ai_fab_pos";
+const REPLY_MODE_KEY = "ict_ai_reply_mode";
+const REPLY_MODES = [
+  { value: "executive", label: "Executive" },
+  { value: "technical", label: "Technical" },
+  { value: "brief", label: "Brief" },
+];
 
 function getStoredFabPos() {
   try {
@@ -242,6 +248,9 @@ export default function AIChat({ inventory, onOpenSettings }) {
   const [open, setOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputVal, setInputVal] = useState("");
+  const [replyMode, setReplyMode] = useState(
+    () => window.localStorage.getItem(REPLY_MODE_KEY) || "technical"
+  );
   const [hasKey, setHasKey] = useState(() => hasAnyAIKey());
   const [fabPos, setFabPos] = useState(getStoredFabPos);
   const [isDragging, setIsDragging] = useState(false);
@@ -302,6 +311,10 @@ export default function AIChat({ inventory, onOpenSettings }) {
       else if (error === "no_key") setError(null);
     }
   }, [open]);
+
+  useEffect(() => {
+    window.localStorage.setItem(REPLY_MODE_KEY, replyMode);
+  }, [replyMode]);
 
   // Handle dragging the Ask AI button anywhere on screen
   const handlePointerDown = (e) => {
@@ -364,8 +377,8 @@ export default function AIChat({ inventory, onOpenSettings }) {
     if (!text || isLoading) return;
     setInputVal("");
     const prevMsgCount = messages.length;
-    await sendMessage(text, inventory);
-  }, [inputVal, isLoading, sendMessage, inventory, messages.length]);
+    await sendMessage(text, inventory, { replyMode });
+  }, [inputVal, isLoading, sendMessage, inventory, messages.length, replyMode]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -389,11 +402,11 @@ export default function AIChat({ inventory, onOpenSettings }) {
         // Auto-send when speech ends
         if (finalText.trim() && !isLoading) {
           setInputVal("");
-          sendMessage(finalText.trim(), inventory);
+          sendMessage(finalText.trim(), inventory, { replyMode });
         }
       });
     }
-  }, [isListening, stopListening, startListening, transcript, isLoading, sendMessage, inventory]);
+  }, [isListening, stopListening, startListening, transcript, isLoading, sendMessage, inventory, replyMode]);
 
   // ── Update input with live transcript ──
   useEffect(() => {
@@ -751,6 +764,22 @@ export default function AIChat({ inventory, onOpenSettings }) {
                   </button>
                 </div>
               )}
+              <div className="ai-reply-mode-row" role="group" aria-label="Reply style">
+                <span className="ai-reply-mode-label">Style</span>
+                <div className="ai-reply-mode-switch">
+                  {REPLY_MODES.map((mode) => (
+                    <button
+                      key={mode.value}
+                      type="button"
+                      className={`ai-reply-mode-btn ${replyMode === mode.value ? "ai-reply-mode-btn--active" : ""}`}
+                      onClick={() => setReplyMode(mode.value)}
+                      aria-pressed={replyMode === mode.value}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="ai-input-wrap">
                 {sttSupported && (
                   <button

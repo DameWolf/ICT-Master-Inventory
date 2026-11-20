@@ -4,3 +4,5 @@
 
 export const EMBEDDED_OPENAI_API_KEY = "";
 export const EMBEDDED_GEMINI_API_KEY = "";
+export const EMBEDDED_ELEVENLABS_API_KEY = "";
+export const EMBEDDED_ELEVENLABS_VOICE_ID = "EXAVITQu4vr4xnSDxMaL";

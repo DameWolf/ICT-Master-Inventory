@@ -286,8 +286,11 @@ export default function AIChat({ inventory, onOpenSettings }) {
     setSpeechEngine,
     elevenVoiceId,
     setElevenVoiceId,
+    elevenStylePreset,
+    setElevenStylePreset,
     elevenLabsAvailable,
     elevenLabsProfiles,
+    elevenLabsStylePresets,
   } = useVoice();
 
   const messagesEndRef = useRef(null);
@@ -628,20 +631,37 @@ export default function AIChat({ inventory, onOpenSettings }) {
               </div>
 
               {speechEngine === "elevenlabs" && elevenLabsAvailable && (
-                <div className="ai-voice-settings-row">
-                  <label className="ai-voice-label">Premium voice</label>
-                  <select
-                    className="ai-voice-select"
-                    value={elevenVoiceId}
-                    onChange={(e) => setElevenVoiceId(e.target.value)}
-                  >
-                    {elevenLabsProfiles.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <>
+                  <div className="ai-voice-settings-row">
+                    <label className="ai-voice-label">Premium voice</label>
+                    <select
+                      className="ai-voice-select"
+                      value={elevenVoiceId}
+                      onChange={(e) => setElevenVoiceId(e.target.value)}
+                    >
+                      {elevenLabsProfiles.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="ai-voice-settings-row">
+                    <label className="ai-voice-label">Voice style</label>
+                    <select
+                      className="ai-voice-select"
+                      value={elevenStylePreset}
+                      onChange={(e) => setElevenStylePreset(e.target.value)}
+                    >
+                      {elevenLabsStylePresets.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
               )}
 
               <div className="ai-voice-settings-row">

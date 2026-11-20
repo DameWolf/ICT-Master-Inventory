@@ -414,6 +414,10 @@ function App() {
       <AIChat
         inventory={inventory}
         onOpenSettings={() => setSettingsOpen(true)}
+        onUpdateItem={updateItem}
+        onAddItem={addItem}
+        onDeleteItem={deleteItem}
+        onRequireAuth={requireAuth}
       />
 
       <Toast toasts={toasts} onDismiss={dismissToast} />

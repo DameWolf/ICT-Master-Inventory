@@ -665,12 +665,25 @@ export function useAIChat() {
     setIsLoading(false);
   }, []);
 
+  const addLocalMessage = useCallback((role, content) => {
+    if (!content) return;
+    setMessages((prev) => [
+      ...prev,
+      {
+        role,
+        content,
+        timestamp: new Date(),
+      },
+    ]);
+  }, []);
+
   return {
     messages,
     isLoading,
     error,
     setError,
     sendMessage,
+    addLocalMessage,
     clearChat,
     stopGeneration,
   };

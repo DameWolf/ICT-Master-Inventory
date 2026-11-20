@@ -206,6 +206,48 @@
 }
 .search-clear:hover { color: #800020; }
 
+.recent-searches-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.recent-searches-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #7a5866;
+}
+
+.recent-search-chip {
+  border: 1px solid #e5dcca;
+  background: #ffffff;
+  color: #5c3545;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.recent-search-chip:hover {
+  color: #800020;
+  border-color: #d4af37;
+  transform: translateY(-1px);
+}
+
+[data-theme="dark"] .recent-searches-label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+[data-theme="dark"] .recent-search-chip {
+  background: #1c0a12;
+  color: #ffffff;
+  border-color: rgba(212, 175, 55, 0.35);
+}
+
 /* Campus Filter Pills */
 .campus-filter-row {
   display: flex;

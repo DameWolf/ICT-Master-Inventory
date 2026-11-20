@@ -4,6 +4,19 @@ import { useVoice } from "../hooks/useVoice";
 import aiRobotIcon from "../assets/ai_assistant.png";
 import "./AIChat.css";
 
+const WakeSpeechRecognition =
+  typeof window !== "undefined"
+    ? window.SpeechRecognition || window.webkitSpeechRecognition
+    : null;
+const WAKE_WORD_ENABLED_KEY = "ict_ai_wake_word_enabled";
+const WAKE_PATTERNS = [
+  /\bhey\s+ai\s+assistant\b/i,
+  /\bok(?:ay)?\s+ai\s+assistant\b/i,
+  /\bhey\s+assistant\b/i,
+  /\bok(?:ay)?\s+assistant\b/i,
+  /\bai\s+assistant\b/i,
+];
+
 const SUGGESTED_PROMPTS = [
   "📊 What's the overall health of our inventory?",
   "⚠️ Which departments have the most defective devices?",
@@ -257,6 +270,13 @@ export default function AIChat({ inventory, onOpenSettings }) {
   const [fabPos, setFabPos] = useState(getStoredFabPos);
   const [isDragging, setIsDragging] = useState(false);
   const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
+  const [wakeWordEnabled, setWakeWordEnabled] = useState(() => {
+    try {
+      return window.localStorage.getItem(WAKE_WORD_ENABLED_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
   const [speakingMsgIndex, setSpeakingMsgIndex] = useState(-1);
   const [voiceMode, setVoiceMode] = useState(false); // true when user initiated via mic
   const { messages, isLoading, error, setError, sendMessage, clearChat, stopGeneration } =
@@ -298,6 +318,15 @@ export default function AIChat({ inventory, onOpenSettings }) {
   const inputRef = useRef(null);
   const panelRef = useRef(null);
   const fabRef = useRef(null);
+  const wakeRecognitionRef = useRef(null);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(WAKE_WORD_ENABLED_KEY, wakeWordEnabled ? "1" : "0");
+    } catch {
+      // ignore storage failures
+    }
+  }, [wakeWordEnabled]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -421,6 +450,101 @@ export default function AIChat({ inventory, onOpenSettings }) {
       });
     }
   }, [isListening, stopListening, startListening, transcript, isLoading, sendMessage, inventory, replyMode]);
+
+  useEffect(() => {
+    if (!wakeWordEnabled || !WakeSpeechRecognition || !sttSupported) {
+      if (wakeRecognitionRef.current) {
+        try {
+          wakeRecognitionRef.current.stop();
+        } catch {}
+        wakeRecognitionRef.current = null;
+      }
+      return;
+    }
+
+    // Avoid running wake detector while actively dictating.
+    if (isListening) {
+      if (wakeRecognitionRef.current) {
+        try {
+          wakeRecognitionRef.current.stop();
+        } catch {}
+        wakeRecognitionRef.current = null;
+      }
+      return;
+    }
+
+    let cancelled = false;
+    const recognition = new WakeSpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event) => {
+      if (cancelled) return;
+      const result = event.results?.[event.results.length - 1]?.[0]?.transcript || "";
+      const heard = String(result).trim();
+      if (!heard) return;
+
+      const woke = WAKE_PATTERNS.some((pattern) => pattern.test(heard));
+      if (!woke) return;
+
+      setOpen(true);
+      setVoiceMode(true);
+
+      if (!isLoading) {
+        try {
+          recognition.stop();
+        } catch {}
+        wakeRecognitionRef.current = null;
+        setTimeout(() => {
+          startListening((finalText) => {
+            if (finalText.trim() && !isLoading) {
+              setInputVal("");
+              sendMessage(finalText.trim(), inventory, { replyMode }).finally(() => {
+                setRecentAIQueries(getRecentAIQueries());
+              });
+            }
+          });
+        }, 260);
+      }
+    };
+
+    recognition.onerror = () => {
+      // Speech engines can produce transient errors; auto-restart below.
+    };
+
+    recognition.onend = () => {
+      if (cancelled) return;
+      // Keep wake-word listener alive while enabled.
+      setTimeout(() => {
+        if (!cancelled && wakeWordEnabled && !isListening && wakeRecognitionRef.current === recognition) {
+          try {
+            recognition.start();
+          } catch {
+            // ignore restart failures
+          }
+        }
+      }, 450);
+    };
+
+    wakeRecognitionRef.current = recognition;
+    try {
+      recognition.start();
+    } catch {
+      // ignore start errors (often due to permission not yet granted)
+    }
+
+    return () => {
+      cancelled = true;
+      if (wakeRecognitionRef.current === recognition) {
+        wakeRecognitionRef.current = null;
+      }
+      try {
+        recognition.stop();
+      } catch {}
+    };
+  }, [wakeWordEnabled, sttSupported, isListening, isLoading, startListening, sendMessage, inventory, replyMode]);
 
   // ── Update input with live transcript ──
   useEffect(() => {
@@ -726,9 +850,28 @@ export default function AIChat({ inventory, onOpenSettings }) {
                   {expressiveVoice ? "On" : "Off"}
                 </button>
               </div>
+              <div className="ai-voice-settings-row">
+                <label className="ai-voice-label">Wake word</label>
+                <button
+                  className={`ai-voice-toggle ${wakeWordEnabled ? "ai-voice-toggle--on" : ""}`}
+                  onClick={() => setWakeWordEnabled((v) => !v)}
+                  aria-label="Toggle wake word detection"
+                  disabled={!sttSupported}
+                >
+                  <span className="ai-voice-toggle-track">
+                    <span className="ai-voice-toggle-thumb" />
+                  </span>
+                  {wakeWordEnabled ? "On" : "Off"}
+                </button>
+              </div>
               {!sttSupported && (
                 <div className="ai-voice-compat-warn">
                   ⚠️ Speech-to-text requires Chrome or Edge browser
+                </div>
+              )}
+              {sttSupported && wakeWordEnabled && (
+                <div className="ai-voice-compat-warn">
+                  👂 Wake mode active: say "Hey AI Assistant"
                 </div>
               )}
               {!elevenLabsAvailable && (

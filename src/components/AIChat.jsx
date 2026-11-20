@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useAIChat, getAIKey, setAIKey, hasAnyAIKey } from "../hooks/useAIChat";
+import { useAIChat, getAIKey, setAIKey, hasAnyAIKey, getRecentAIQueries } from "../hooks/useAIChat";
 import { useVoice } from "../hooks/useVoice";
 import aiRobotIcon from "../assets/ai_assistant.png";
 import "./AIChat.css";
@@ -249,6 +249,7 @@ export default function AIChat({ inventory, onOpenSettings }) {
   const [open, setOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputVal, setInputVal] = useState("");
+  const [recentAIQueries, setRecentAIQueries] = useState(() => getRecentAIQueries());
   const [replyMode, setReplyMode] = useState(
     () => window.localStorage.getItem(REPLY_MODE_KEY) || "technical"
   );
@@ -388,6 +389,7 @@ export default function AIChat({ inventory, onOpenSettings }) {
     setInputVal("");
     const prevMsgCount = messages.length;
     await sendMessage(text, inventory, { replyMode });
+    setRecentAIQueries(getRecentAIQueries());
   }, [inputVal, isLoading, sendMessage, inventory, messages.length, replyMode]);
 
   const handleKeyDown = (e) => {
@@ -412,7 +414,9 @@ export default function AIChat({ inventory, onOpenSettings }) {
         // Auto-send when speech ends
         if (finalText.trim() && !isLoading) {
           setInputVal("");
-          sendMessage(finalText.trim(), inventory, { replyMode });
+          sendMessage(finalText.trim(), inventory, { replyMode }).finally(() => {
+            setRecentAIQueries(getRecentAIQueries());
+          });
         }
       });
     }
@@ -762,6 +766,27 @@ export default function AIChat({ inventory, onOpenSettings }) {
                         </button>
                       ))}
                     </div>
+
+                    {recentAIQueries.length > 0 && (
+                      <div className="ai-recent-prompts">
+                        <p className="ai-recent-prompts-label">Recent searches</p>
+                        <div className="ai-recent-prompts-chips">
+                          {recentAIQueries.slice(0, 6).map((q) => (
+                            <button
+                              key={q}
+                              className="ai-suggest-chip ai-suggest-chip--recent"
+                              onClick={() => {
+                                setInputVal(q);
+                                inputRef.current?.focus();
+                              }}
+                              title={q}
+                            >
+                              {q.length > 48 ? `${q.slice(0, 48)}...` : q}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

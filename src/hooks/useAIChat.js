@@ -569,10 +569,16 @@ export function useAIChat() {
 
   const sendMessage = useCallback(async (userText, inventory, options = {}) => {
     const preferredProvider = getAIProvider();
-    const activeProvider = resolveProviderWithKey(preferredProvider);
-    const apiKey = getAIKeyForProvider(activeProvider);
+    const providerOrder = [
+      preferredProvider,
+      preferredProvider === "openai" ? "gemini" : "openai",
+    ];
+    const candidateProviders = providerOrder.filter(
+      (provider, idx, arr) =>
+        arr.indexOf(provider) === idx && hasAIKeyForProvider(provider)
+    );
 
-    if (!apiKey) {
+    if (candidateProviders.length === 0) {
       setError("no_key");
       return;
     }
@@ -607,29 +613,66 @@ export function useAIChat() {
       setMessages((prev) => [...prev, aiMsg]);
 
       let fullText = "";
-      const stream =
-        activeProvider === "gemini"
-          ? createGeminiStream({
-              apiKey,
-              userText,
-              systemPrompt,
-              previousMessages: prevMessages,
-            })
-          : createOpenAIStream({
-              apiKey,
-              userText,
-              systemPrompt,
-              previousMessages: prevMessages,
-            });
+      let streamSucceeded = false;
+      let lastErr = null;
+      let authFailureCount = 0;
 
-      for await (const chunkText of stream) {
-        if (abortRef.current) break;
-        fullText += chunkText;
-        setMessages((prev) =>
-          prev.map((m, i) =>
-            i === prev.length - 1 ? { ...m, content: fullText } : m
-          )
-        );
+      for (const provider of candidateProviders) {
+        const apiKey = getAIKeyForProvider(provider);
+        if (!apiKey) continue;
+
+        let providerText = "";
+        try {
+          const stream =
+            provider === "gemini"
+              ? createGeminiStream({
+                  apiKey,
+                  userText,
+                  systemPrompt,
+                  previousMessages: prevMessages,
+                })
+              : createOpenAIStream({
+                  apiKey,
+                  userText,
+                  systemPrompt,
+                  previousMessages: prevMessages,
+                });
+
+          for await (const chunkText of stream) {
+            if (abortRef.current) break;
+            providerText += chunkText;
+            setMessages((prev) =>
+              prev.map((m, i) =>
+                i === prev.length - 1 ? { ...m, content: providerText } : m
+              )
+            );
+          }
+
+          fullText = providerText;
+          streamSucceeded = true;
+          // Persist working provider so next request starts with it.
+          setAIProvider(provider);
+          break;
+        } catch (err) {
+          lastErr = err;
+          const errText = `${err?.message || ""} ${err?.status || ""}`;
+          if (isAuthError(errText)) {
+            authFailureCount += 1;
+          }
+          // Do not fall back after partial generation to avoid mixed outputs.
+          if (providerText.trim()) {
+            throw err;
+          }
+        }
+      }
+
+      if (!streamSucceeded) {
+        if (authFailureCount >= candidateProviders.length) {
+          const authError = new Error("All configured provider keys were rejected.");
+          authError.status = 401;
+          throw authError;
+        }
+        throw lastErr || new Error("All configured providers failed.");
       }
 
       setMessages((prev) =>

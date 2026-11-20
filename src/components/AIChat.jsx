@@ -260,7 +260,10 @@ const VOICE_HELP_TEXT = `Voice commands:
 - Find item <asset tag or keyword>
 - Set status of <asset tag> to Functional|Defective|For Upgrade|For Replacement
 - Assign user of <asset tag> to <name>
-- Set department of <asset tag> to <department>`;
+- Set department of <asset tag> to <department>
+- Create item <device type> with asset tag <tag> (then say: confirm create)
+- Delete item <asset tag> (then say: confirm delete)
+- Say cancel to cancel a pending command`;
 
 function normalizeStatusLabel(raw) {
   const value = String(raw || "").trim().toLowerCase();
@@ -298,6 +301,7 @@ export default function AIChat({
       return false;
     }
   });
+  const [pendingVoiceAction, setPendingVoiceAction] = useState(null);
   const [speakingMsgIndex, setSpeakingMsgIndex] = useState(-1);
   const [voiceMode, setVoiceMode] = useState(false); // true when user initiated via mic
   const { messages, isLoading, error, setError, sendMessage, addLocalMessage, clearChat, stopGeneration } =
@@ -483,9 +487,61 @@ export default function AIChat({
     return onRequireAuth();
   }, [onRequireAuth]);
 
+  const executePendingVoiceAction = useCallback(async () => {
+    if (!pendingVoiceAction) return true;
+
+    if (!canMutate()) {
+      addLocalMessage("assistant", "Sign in is required before editing inventory records.");
+      return true;
+    }
+
+    if (pendingVoiceAction.type === "delete") {
+      const item = pendingVoiceAction.payload?.item;
+      if (!item || typeof onDeleteItem !== "function") {
+        addLocalMessage("assistant", "Delete action is not available in this context.");
+        return true;
+      }
+      await onDeleteItem(item.id);
+      addLocalMessage("assistant", `Deleted ${item.assetTag || item.id} (${item.deviceType || item.name || "item"}).`);
+      return true;
+    }
+
+    if (pendingVoiceAction.type === "create") {
+      const draft = pendingVoiceAction.payload?.draft;
+      if (!draft || typeof onAddItem !== "function") {
+        addLocalMessage("assistant", "Create action is not available in this context.");
+        return true;
+      }
+      const created = await onAddItem(draft);
+      addLocalMessage(
+        "assistant",
+        `Created item ${created?.assetTag || draft.assetTag || "(no tag)"}: ${created?.deviceType || draft.deviceType || draft.name || "New Device"}.`
+      );
+      return true;
+    }
+
+    return false;
+  }, [pendingVoiceAction, canMutate, addLocalMessage, onDeleteItem, onAddItem]);
+
   const handleVoiceOrCommandAction = useCallback(async (rawText) => {
     const text = String(rawText || "").trim();
     if (!text) return false;
+
+    const isCancel = /^(?:cancel|abort|stop|nevermind|never mind)$/i.test(text);
+    if (isCancel && pendingVoiceAction) {
+      addLocalMessage("user", text);
+      setPendingVoiceAction(null);
+      addLocalMessage("assistant", "Pending voice command canceled.");
+      return true;
+    }
+
+    const isConfirm = /^(?:confirm|yes|proceed|confirm\s+delete|confirm\s+create)$/i.test(text);
+    if (isConfirm && pendingVoiceAction) {
+      addLocalMessage("user", text);
+      await executePendingVoiceAction();
+      setPendingVoiceAction(null);
+      return true;
+    }
 
     const findMatch = text.match(/^(?:find|search|look\s*up|show)\s+(?:item\s+)?(.+)$/i);
     if (findMatch) {
@@ -574,13 +630,105 @@ export default function AIChat({
       return true;
     }
 
+    const createMatch = text.match(/^(?:create|add)\s+(?:item\s+)?(.+?)\s+(?:with\s+asset\s+tag\s+|asset\s+tag\s+)([a-z0-9\-_/]+)(?:\s+confirm)?$/i);
+    if (createMatch) {
+      const deviceType = createMatch[1].trim();
+      const assetTag = createMatch[2].trim();
+      const immediateConfirm = /\bconfirm\b/i.test(text);
+      addLocalMessage("user", text);
+
+      if (!deviceType || !assetTag) {
+        addLocalMessage("assistant", `Please include both device type and asset tag.\n\n${VOICE_HELP_TEXT}`);
+        return true;
+      }
+
+      if (findSingleByAssetTag(assetTag)) {
+        addLocalMessage("assistant", `Asset tag "${assetTag}" already exists.`);
+        return true;
+      }
+
+      const fallbackCampus = (inventory || []).find((i) => i.campus)?.campus || "Main";
+      const fallbackDept = (inventory || []).find((i) => i.department)?.department || "ICT";
+      const draft = {
+        name: deviceType,
+        deviceType,
+        category: "Computing Devices",
+        tabCategory: "Computing Devices",
+        campus: fallbackCampus,
+        department: fallbackDept,
+        assignedUser: "",
+        status: "Functional",
+        assetTag,
+        yearPurchased: String(new Date().getFullYear()),
+      };
+
+      if (immediateConfirm) {
+        if (!canMutate()) {
+          addLocalMessage("assistant", "Sign in is required before editing inventory records.");
+          return true;
+        }
+        if (typeof onAddItem === "function") {
+          const created = await onAddItem(draft);
+          addLocalMessage("assistant", `Created item ${created?.assetTag || assetTag}: ${created?.deviceType || deviceType}.`);
+        } else {
+          addLocalMessage("assistant", "Create action is not available in this context.");
+        }
+        return true;
+      }
+
+      setPendingVoiceAction({ type: "create", payload: { draft } });
+      addLocalMessage(
+        "assistant",
+        `Ready to create item ${assetTag} (${deviceType}). Say "confirm create" to proceed or "cancel" to abort.`
+      );
+      return true;
+    }
+
+    const deleteMatch = text.match(/^(?:delete|remove)\s+(?:item\s+)?(.+?)(?:\s+confirm)?$/i);
+    if (deleteMatch) {
+      const assetTag = deleteMatch[1].trim();
+      const immediateConfirm = /\bconfirm\b/i.test(text);
+      addLocalMessage("user", text);
+      const item = findSingleByAssetTag(assetTag);
+      if (!item) {
+        addLocalMessage("assistant", `I couldn't find asset tag "${assetTag}".`);
+        return true;
+      }
+
+      if (immediateConfirm) {
+        if (!canMutate()) {
+          addLocalMessage("assistant", "Sign in is required before editing inventory records.");
+          return true;
+        }
+        if (typeof onDeleteItem === "function") {
+          await onDeleteItem(item.id);
+          addLocalMessage("assistant", `Deleted ${item.assetTag || item.id} (${item.deviceType || item.name || "item"}).`);
+        } else {
+          addLocalMessage("assistant", "Delete action is not available in this context.");
+        }
+        return true;
+      }
+
+      setPendingVoiceAction({ type: "delete", payload: { item } });
+      addLocalMessage(
+        "assistant",
+        `Ready to delete ${item.assetTag || item.id} (${item.deviceType || item.name || "item"}). Say "confirm delete" to proceed or "cancel" to abort.`
+      );
+      return true;
+    }
+
     return false;
   }, [
     addLocalMessage,
     canMutate,
+    executePendingVoiceAction,
     findInventoryMatches,
     findSingleByAssetTag,
+    inventory,
+    onAddItem,
+    onDeleteItem,
     onUpdateItem,
+    pendingVoiceAction,
   ]);
 
   // ── Voice: mic toggle ──

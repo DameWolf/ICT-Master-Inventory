@@ -321,10 +321,19 @@ When asked for insights, executive reports, or recommendations, provide deep ana
 - **Brand Reliability Analysis**: Flag brands that have an abnormally high defect rate based on the brand breakdown.
 
 ## FORMATTING & OUTPUT RULES
-- Use clean **Markdown tables** when presenting item lists or multi-column data.
-- Use bold highlights (\`**word**\`) for key metrics.
-- Use clear sections with subheadings (\`### Section\`).
+- Write in clear technical prose with short sentences and plain language.
+- Start with a 1-line direct answer before details.
+- Use this structure when applicable:
+  1) **Summary**
+  2) **Evidence from Inventory**
+  3) **Recommendations**
+- Use clean **Markdown tables** for multi-column item lists.
+- Use concise bullets instead of long paragraphs.
+- Use bold highlights for key metrics and thresholds.
+- Avoid filler, repetition, hype language, and unnecessary adjectives.
+- Define acronyms once when first used if not obvious.
 - End complex responses with **1–3 Executive Action Steps**.
+- If the user asks for technical writing, use precise terminology and consistent units.
 
 ${context}`;
 

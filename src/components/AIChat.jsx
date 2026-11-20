@@ -546,12 +546,12 @@ export default function AIChat({ inventory, onOpenSettings }) {
             </div>
             <div className="ai-header-actions">
               <button
-                className={`ai-icon-btn ${isExpanded ? "ai-icon-btn--active" : ""}`}
+                className={`ai-icon-btn ai-expand-btn ${isExpanded ? "ai-icon-btn--active" : ""}`}
                 onClick={() => setIsExpanded((v) => !v)}
                 title={isExpanded ? "Restore size" : "Expand and center"}
                 aria-label={isExpanded ? "Restore chat size" : "Expand chat"}
               >
-                {isExpanded ? "🗗" : "⛶"}
+                {isExpanded ? "Restore" : "Expand"}
               </button>
               {ttsSupported && (
                 <button

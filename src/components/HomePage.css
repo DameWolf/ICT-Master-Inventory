@@ -202,12 +202,14 @@
 
 .hero-title-gradient {
   background: linear-gradient(135deg, #800020 0%, #9E1B32 50%, #d4af37 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 [data-theme="dark"] .hero-title-gradient {
   background: linear-gradient(135deg, #ffd700 0%, #ff85a1 60%, #ffffff 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

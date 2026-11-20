@@ -282,6 +282,12 @@ export default function AIChat({ inventory, onOpenSettings }) {
     setExpressiveVoice,
     autoSpeak,
     setAutoSpeak,
+    speechEngine,
+    setSpeechEngine,
+    elevenVoiceId,
+    setElevenVoiceId,
+    elevenLabsAvailable,
+    elevenLabsProfiles,
   } = useVoice();
 
   const messagesEndRef = useRef(null);
@@ -608,11 +614,43 @@ export default function AIChat({ inventory, onOpenSettings }) {
           {voiceSettingsOpen && (
             <div className="ai-voice-settings">
               <div className="ai-voice-settings-row">
+                <label className="ai-voice-label">Speech engine</label>
+                <select
+                  className="ai-voice-select"
+                  value={speechEngine}
+                  onChange={(e) => setSpeechEngine(e.target.value)}
+                >
+                  <option value="browser">Browser voice</option>
+                  <option value="elevenlabs" disabled={!elevenLabsAvailable}>
+                    ElevenLabs premium {!elevenLabsAvailable ? "(API key required)" : ""}
+                  </option>
+                </select>
+              </div>
+
+              {speechEngine === "elevenlabs" && elevenLabsAvailable && (
+                <div className="ai-voice-settings-row">
+                  <label className="ai-voice-label">Premium voice</label>
+                  <select
+                    className="ai-voice-select"
+                    value={elevenVoiceId}
+                    onChange={(e) => setElevenVoiceId(e.target.value)}
+                  >
+                    {elevenLabsProfiles.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="ai-voice-settings-row">
                 <label className="ai-voice-label">Voice</label>
                 <select
                   className="ai-voice-select"
                   value={selectedVoiceURI}
                   onChange={(e) => setSelectedVoiceURI(e.target.value)}
+                  disabled={speechEngine === "elevenlabs"}
                 >
                   {voices
                     .filter((v) => v.lang.startsWith("en"))
@@ -667,6 +705,11 @@ export default function AIChat({ inventory, onOpenSettings }) {
               {!sttSupported && (
                 <div className="ai-voice-compat-warn">
                   ⚠️ Speech-to-text requires Chrome or Edge browser
+                </div>
+              )}
+              {!elevenLabsAvailable && (
+                <div className="ai-voice-compat-warn">
+                  ℹ️ For premium voice, set EMBEDDED_ELEVENLABS_API_KEY in src/config/aiKeys.js
                 </div>
               )}
             </div>

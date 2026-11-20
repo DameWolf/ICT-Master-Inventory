@@ -205,16 +205,16 @@ function NoKeyScreen({ onOpenSettings }) {
       <div className="ai-nokey-icon">🔑</div>
       <h3>Set up Chit the Chat Bot</h3>
       <p>
-        To use the AI assistant, add your free Google Gemini API key in Settings.
+        To use the AI assistant, add your API key in Settings (OpenAI or Google Gemini).
         Your key is stored only in this browser.
       </p>
       <a
-        href="https://aistudio.google.com/app/apikey"
+        href="https://platform.openai.com/api-keys"
         target="_blank"
         rel="noopener noreferrer"
         className="ai-nokey-link"
       >
-        Get a free API key →
+        Get an API key →
       </a>
       <button className="ai-nokey-btn" onClick={onOpenSettings} id="ai-open-settings">
         ⚙️ Open Settings
@@ -526,7 +526,7 @@ export default function AIChat({ inventory, onOpenSettings }) {
               <div>
                 <div className="ai-header-title">Chit the Chat Bot</div>
                 <div className="ai-header-sub">
-                  Powered by Google Gemini
+                  Powered by OpenAI or Google Gemini
                   {messages.length > 0 && (
                     <span className="ai-memory-badge">🧠 {messages.length} msgs remembered</span>
                   )}
@@ -688,7 +688,7 @@ export default function AIChat({ inventory, onOpenSettings }) {
                 )}
                 {error === "api_error" && (
                   <div className="ai-error-banner ai-error-banner--warn">
-                    ⚠️ Request failed. This usually means your Gemini API key is missing or invalid.
+                    ⚠️ Request failed. This usually means your selected API key is missing, invalid, or over quota.
                     <br />
                     <button onClick={handleOpenSettings}>⚙️ Add API Key in Settings →</button>
                   </div>

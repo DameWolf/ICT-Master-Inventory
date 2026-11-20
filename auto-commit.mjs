@@ -2,7 +2,7 @@
 /**
  * auto-commit.mjs
  * ───────────────────────────────────────────────────────────
- * Watches the src/ directory for file changes and automatically
+ * Watches the repository for file changes and automatically
  * commits + pushes to GitHub after a quiet period (debounce).
  *
  * Usage:  npm run auto-commit
@@ -17,9 +17,22 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ── Config ──────────────────────────────────────────────────
-const WATCH_PATHS = ["src", "public", "index.html", "vite.config.js", "package.json", "README.md", ".gitignore"];
-const IGNORE = [/node_modules/, /\.git/, /dist/, /\.DS_Store/, /debug-browser\.js/, /debug-playwright\.mjs/, /debug\.spec\.js/];
+const WATCH_PATHS = ["."];
+const IGNORE = [
+  /node_modules/,
+  /\.git/,
+  /dist/,
+  /dist-ssr/,
+  /logs/,
+  /\.DS_Store/,
+  /debug-browser\.js/,
+  /debug-playwright\.mjs/,
+  /debug\.spec\.js/,
+  /\.env$/,
+  /\.env\./,
+];
 const DEBOUNCE_MS = 5_000;
+const MAX_CHANGED_FILES_IN_MESSAGE = 5;
 const BRANCH = (() => {
   try {
     return execSync("git rev-parse --abbrev-ref HEAD", { cwd: __dirname, encoding: "utf8" }).trim() || "main";
@@ -31,6 +44,7 @@ const BRANCH = (() => {
 
 let debounceTimer = null;
 const changedFiles = new Set();
+let committing = false;
 
 const colors = {
   reset:  "\x1b[0m",
@@ -56,15 +70,31 @@ function hasUncommittedChanges() {
   return status.length > 0;
 }
 
+function hasRemoteOrigin() {
+  try {
+    return Boolean(run("git remote get-url origin"));
+  } catch {
+    return false;
+  }
+}
+
+function isIgnoredPath(filePath) {
+  return IGNORE.some((pattern) => pattern.test(filePath));
+}
+
 function autoCommit() {
+  if (committing) return;
+  committing = true;
+
   if (!hasUncommittedChanges()) {
     log("✓", colors.dim, "No changes to commit.");
     changedFiles.clear();
+    committing = false;
     return;
   }
 
-  const fileList = [...changedFiles].slice(0, 5).join(", ");
-  const extra = changedFiles.size > 5 ? ` +${changedFiles.size - 5} more` : "";
+  const fileList = [...changedFiles].slice(0, MAX_CHANGED_FILES_IN_MESSAGE).join(", ");
+  const extra = changedFiles.size > MAX_CHANGED_FILES_IN_MESSAGE ? ` +${changedFiles.size - MAX_CHANGED_FILES_IN_MESSAGE} more` : "";
   const now = new Date().toLocaleString("en-PH", {
     month: "short", day: "numeric",
     hour: "2-digit", minute: "2-digit", hour12: true,
@@ -77,16 +107,22 @@ function autoCommit() {
     run(`git commit -m "${message}"`);
     log("📦", colors.green, `Committed: ${colors.bold}${message}${colors.reset}`);
 
-    log("🚀", colors.cyan, `Pushing to origin/${BRANCH}…`);
-    try {
-      run(`git push origin ${BRANCH}`);
-      log("✅", colors.green, `${colors.bold}Pushed successfully!${colors.reset}`);
-    } catch (pushErr) {
-      log("⚠️", colors.yellow, `Push skipped or failed: ${pushErr.message}`);
-      log("ℹ️", colors.dim, "You can run: git push origin " + BRANCH);
+    if (hasRemoteOrigin()) {
+      log("🚀", colors.cyan, `Pushing to origin/${BRANCH}…`);
+      try {
+        run(`git push origin ${BRANCH}`);
+        log("✅", colors.green, `${colors.bold}Pushed successfully!${colors.reset}`);
+      } catch (pushErr) {
+        log("⚠️", colors.yellow, `Push skipped or failed: ${pushErr.message}`);
+        log("ℹ️", colors.dim, "You can run: git push origin " + BRANCH);
+      }
+    } else {
+      log("⚠️", colors.yellow, "No git remote named 'origin'. Commit created locally only.");
     }
   } catch (err) {
     log("❌", colors.red, `Git error: ${err.message}`);
+  } finally {
+    committing = false;
   }
 
   changedFiles.clear();
@@ -94,6 +130,8 @@ function autoCommit() {
 
 function scheduleCommit(filePath) {
   const rel = path.relative(__dirname, filePath);
+  if (!rel || isIgnoredPath(rel)) return;
+
   changedFiles.add(rel);
   log("📝", colors.yellow, `Changed: ${rel} — committing in ${DEBOUNCE_MS / 1000}s…`);
 
@@ -106,10 +144,13 @@ console.log(`\n${colors.bold}${colors.cyan}━━━  ICT Inventory Auto-Commit 
 console.log(`${colors.dim}Watching: ${WATCH_PATHS.join(", ")}`);
 console.log(`Debounce: ${DEBOUNCE_MS / 1000}s after last change`);
 console.log(`Branch  : ${BRANCH}${colors.reset}\n`);
+if (!hasRemoteOrigin()) {
+  log("⚠️", colors.yellow, "No origin remote detected. Push step will be skipped.");
+}
 
 const watcher = chokidar.watch(WATCH_PATHS, {
   cwd: __dirname,
-  ignored: IGNORE,
+  ignored: (watchedPath) => isIgnoredPath(watchedPath),
   persistent: true,
   ignoreInitial: true,
   awaitWriteFinish: { stabilityThreshold: 500, pollInterval: 100 },

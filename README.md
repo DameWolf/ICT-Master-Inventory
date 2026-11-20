@@ -14,3 +14,16 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the Oxlint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+
+## Auto Commit + Push
+
+This workspace includes an auto-sync watcher that commits and pushes changes to your current git branch after 5 seconds of no file edits.
+
+- Run manually: `npm run auto-sync`
+- Auto-start in VS Code: `.vscode/tasks.json` includes a background task with `runOn: folderOpen`
+
+Notes:
+
+- It watches the entire repository and ignores folders like `.git`, `node_modules`, `dist`, logs, and `.env*` files.
+- Pushes target `origin/<current-branch>`.
+- If GitHub authentication is not configured, commits are created locally and push will fail until auth is fixed.

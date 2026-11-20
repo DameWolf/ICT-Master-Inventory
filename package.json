@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "auto-commit": "node auto-commit.mjs",
+    "auto-sync": "node auto-commit.mjs",
     "sync:supabase": "node scripts/sync-sheet-to-supabase.mjs"
   },
   "dependencies": {

@@ -1,33 +1,79 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { EMBEDDED_OPENAI_API_KEY, EMBEDDED_GEMINI_API_KEY } from "../config/aiKeys";
 
 // ── Storage keys ────────────────────────────────────────────
-const STORAGE_KEY_API    = "ict_ai_key";
-const STORAGE_KEY_MSGS   = "ict_ai_messages";
-const MAX_STORED_MSGS    = 200;   // max messages persisted to localStorage
-const MAX_API_HISTORY    = 20;    // last N messages sent to Gemini API per request
+const STORAGE_KEY_PROVIDER = "ict_ai_provider";
+const STORAGE_KEY_OPENAI = "ict_ai_key_openai";
+const STORAGE_KEY_GEMINI = "ict_ai_key";
+const STORAGE_KEY_MSGS = "ict_ai_messages";
+const MAX_STORED_MSGS = 200; // max messages persisted to localStorage
+const MAX_API_HISTORY = 20; // last N messages sent to model API per request
 
 // ── API Key helpers ─────────────────────────────────────────
 // Priority: env variable (baked in at build) → localStorage (user-configured)
-const ENV_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+const ENV_OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
+const ENV_GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+const VALID_PROVIDERS = new Set(["openai", "gemini"]);
 
-export function getAIKey() {
-  // Prefer the verified build-time key; fall back to a Settings key.
-  const envKey = ENV_API_KEY.trim();
-  return envKey || localStorage.getItem(STORAGE_KEY_API)?.trim() || "";
+export function getAIProvider() {
+  const stored = (localStorage.getItem(STORAGE_KEY_PROVIDER) || "").trim().toLowerCase();
+  if (VALID_PROVIDERS.has(stored)) return stored;
+  return "openai";
 }
-export function setAIKey(key) {
+
+export function setAIProvider(provider) {
+  const normalized = String(provider || "").trim().toLowerCase();
+  if (VALID_PROVIDERS.has(normalized)) {
+    localStorage.setItem(STORAGE_KEY_PROVIDER, normalized);
+  }
+}
+
+export function getProviderLabel(provider) {
+  return provider === "gemini" ? "Google Gemini" : "OpenAI";
+}
+
+function getAIKeyForProvider(provider) {
+  if (provider === "gemini") {
+    const embeddedGemini = EMBEDDED_GEMINI_API_KEY.trim();
+    return embeddedGemini || ENV_GEMINI_API_KEY.trim() || localStorage.getItem(STORAGE_KEY_GEMINI)?.trim() || "";
+  }
+  const embeddedOpenAI = EMBEDDED_OPENAI_API_KEY.trim();
+  return embeddedOpenAI || ENV_OPENAI_API_KEY.trim() || localStorage.getItem(STORAGE_KEY_OPENAI)?.trim() || "";
+}
+
+function hasAIKeyForProvider(provider) {
+  return Boolean(getAIKeyForProvider(provider));
+}
+
+function resolveProviderWithKey(preferredProvider) {
+  if (hasAIKeyForProvider(preferredProvider)) return preferredProvider;
+  if (preferredProvider !== "openai" && hasAIKeyForProvider("openai")) return "openai";
+  if (preferredProvider !== "gemini" && hasAIKeyForProvider("gemini")) return "gemini";
+  return preferredProvider;
+}
+
+export function getAIKey(provider = null) {
+  const chosenProvider = provider || resolveProviderWithKey(getAIProvider());
+  if (VALID_PROVIDERS.has(chosenProvider)) {
+    return getAIKeyForProvider(chosenProvider);
+  }
+  const providerWithKey = resolveProviderWithKey(getAIProvider());
+  return getAIKeyForProvider(providerWithKey);
+}
+export function setAIKey(key, provider = getAIProvider()) {
   const trimmedKey = key.trim();
+  const storageKey = provider === "gemini" ? STORAGE_KEY_GEMINI : STORAGE_KEY_OPENAI;
   if (trimmedKey) {
-    localStorage.setItem(STORAGE_KEY_API, trimmedKey);
+    localStorage.setItem(storageKey, trimmedKey);
   } else {
-    localStorage.removeItem(STORAGE_KEY_API);
+    localStorage.removeItem(storageKey);
   }
 }
 
 // Returns true if a key is available from ANY source (env OR localStorage)
 export function hasAnyAIKey() {
-  return Boolean(localStorage.getItem(STORAGE_KEY_API)?.trim() || ENV_API_KEY.trim());
+  return hasAIKeyForProvider("openai") || hasAIKeyForProvider("gemini");
 }
 
 // ── Message persistence ─────────────────────────────────────
@@ -59,7 +105,8 @@ function saveMessages(messages) {
  *   1. Aggregate statistics (always included)
  *   2. Full device-level compact TSV (all items, token-efficient)
  *
- * Gemini Flash has a 1M token window, so including all items is safe
+ * This app includes both aggregate and item-level data to support precise
+ * analytical answers and direct item lookups.
  * and gives the model the ability to answer precise per-item questions.
  */
 function buildInventoryContext(inventory) {
@@ -247,6 +294,148 @@ When asked for insights, executive reports, or recommendations, provide deep ana
 
 ${context}`;
 
+function isAuthError(errText) {
+  const text = (errText || "").toLowerCase();
+  return (
+    text.includes("api_key") ||
+    text.includes("api key") ||
+    text.includes("invalid key") ||
+    text.includes("not valid") ||
+    text.includes("unauthorized") ||
+    text.includes("forbidden") ||
+    text.includes("401") ||
+    text.includes("403")
+  );
+}
+
+function toOpenAIHistory(messages) {
+  return messages
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .slice(-MAX_API_HISTORY)
+    .map((m) => ({ role: m.role, content: m.content || " " }));
+}
+
+async function* createOpenAIStream({ apiKey, userText, systemPrompt, previousMessages }) {
+  const body = {
+    model: "gpt-4.1-mini",
+    stream: true,
+    temperature: 0.2,
+    max_tokens: 1800,
+    messages: [
+      { role: "system", content: systemPrompt },
+      ...toOpenAIHistory(previousMessages),
+      { role: "user", content: userText },
+    ],
+  };
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    let details = "";
+    try {
+      const json = await response.json();
+      details = json?.error?.message || "";
+    } catch {
+      details = "";
+    }
+    throw new Error(`OpenAI request failed (${response.status}): ${details || response.statusText}`);
+  }
+
+  if (!response.body) {
+    throw new Error("OpenAI response did not include a stream body.");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line || !line.startsWith("data:")) continue;
+
+      const data = line.slice(5).trim();
+      if (data === "[DONE]") return;
+
+      try {
+        const parsed = JSON.parse(data);
+        const token = parsed?.choices?.[0]?.delta?.content;
+        if (typeof token === "string" && token) {
+          yield token;
+        }
+      } catch {
+        // Ignore malformed SSE chunks and continue streaming
+      }
+    }
+  }
+}
+
+async function* createGeminiStream({ apiKey, userText, systemPrompt, previousMessages }) {
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const recentMessages = previousMessages.slice(-MAX_API_HISTORY);
+  const history = recentMessages.map((m) => ({
+    role: m.role === "user" ? "user" : "model",
+    parts: [{ text: m.content || " " }],
+  }));
+
+  const candidateModels = [
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "gemini-2.0-flash",
+    "gemini-flash-latest",
+    "gemini-pro-latest",
+  ];
+
+  let result = null;
+  let lastErr = null;
+  for (const modelName of candidateModels) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        systemInstruction: systemPrompt,
+      });
+
+      const chat = model.startChat({
+        history,
+        generationConfig: {
+          maxOutputTokens: 2048,
+          temperature: 0.2,
+        },
+      });
+
+      result = await chat.sendMessageStream(userText);
+      if (result) break;
+    } catch (err) {
+      lastErr = err;
+      if (isAuthError(`${err?.message || ""} ${err?.status || ""}`)) {
+        throw err;
+      }
+    }
+  }
+
+  if (!result) {
+    throw lastErr || new Error("All Gemini models failed to initialize.");
+  }
+
+  for await (const chunk of result.stream) {
+    yield chunk.text();
+  }
+}
+
 // ── Hook ─────────────────────────────────────────────────────
 export function useAIChat() {
   // Load persisted messages on first mount
@@ -261,7 +450,10 @@ export function useAIChat() {
   }, [messages]);
 
   const sendMessage = useCallback(async (userText, inventory) => {
-    const apiKey = getAIKey();
+    const preferredProvider = getAIProvider();
+    const activeProvider = resolveProviderWithKey(preferredProvider);
+    const apiKey = getAIKeyForProvider(activeProvider);
+
     if (!apiKey) {
       setError("no_key");
       return;
@@ -284,22 +476,6 @@ export function useAIChat() {
       // Build inventory context once per request
       const context = buildInventoryContext(inventory);
       const systemPrompt = SYSTEM_PROMPT(context);
-      const genAI = new GoogleGenerativeAI(apiKey);
-
-      // Models to try in order of preference & compatibility
-      const CANDIDATE_MODELS = [
-        "gemini-2.5-flash",
-        "gemini-2.5-pro",
-        "gemini-2.0-flash",
-        "gemini-flash-latest",
-        "gemini-pro-latest",
-      ];
-
-      const recentMessages = prevMessages.slice(-MAX_API_HISTORY);
-      const history = recentMessages.map((m) => ({
-        role: m.role === "user" ? "user" : "model",
-        parts: [{ text: m.content || " " }],
-      }));
 
       // Add optimistic AI message placeholder
       const aiMsg = {
@@ -310,52 +486,25 @@ export function useAIChat() {
       };
       setMessages((prev) => [...prev, aiMsg]);
 
-      let result = null;
-      let lastErr = null;
-
-      // Try candidate models in order until one succeeds
-      for (const modelName of CANDIDATE_MODELS) {
-        try {
-          const model = genAI.getGenerativeModel({
-            model: modelName,
-            systemInstruction: systemPrompt,
-          });
-
-          const chat = model.startChat({
-            history,
-            generationConfig: {
-              maxOutputTokens: 2048,
-              temperature: 0.2,
-            },
-          });
-
-          result = await chat.sendMessageStream(userText);
-          // If stream initialization succeeds, break out of retry loop
-          if (result) break;
-        } catch (err) {
-          lastErr = err;
-          const errText = `${err?.message || ""} ${err?.status || ""}`;
-          if (
-            errText.includes("API_KEY") ||
-            errText.includes("API key") ||
-            errText.includes("invalid key") ||
-            errText.includes("not valid") ||
-            errText.includes("401") ||
-            errText.includes("403")
-          ) {
-            throw err;
-          }
-        }
-      }
-
-      if (!result) {
-        throw lastErr || new Error("All Gemini models failed to initialize.");
-      }
-
       let fullText = "";
-      for await (const chunk of result.stream) {
+      const stream =
+        activeProvider === "gemini"
+          ? createGeminiStream({
+              apiKey,
+              userText,
+              systemPrompt,
+              previousMessages: prevMessages,
+            })
+          : createOpenAIStream({
+              apiKey,
+              userText,
+              systemPrompt,
+              previousMessages: prevMessages,
+            });
+
+      for await (const chunkText of stream) {
         if (abortRef.current) break;
-        fullText += chunk.text();
+        fullText += chunkText;
         setMessages((prev) =>
           prev.map((m, i) =>
             i === prev.length - 1 ? { ...m, content: fullText } : m
@@ -369,15 +518,9 @@ export function useAIChat() {
         )
       );
     } catch (err) {
-      console.error("Gemini AI Error:", err);
+      console.error("AI API Error:", err);
       const errText = `${err?.message || ""} ${err?.status || ""}`;
-      const isKeyError =
-        errText.includes("API_KEY") ||
-        errText.includes("API key") ||
-        errText.includes("invalid key") ||
-        errText.includes("not valid") ||
-        errText.includes("401") ||
-        errText.includes("403");
+      const isKeyError = isAuthError(errText);
 
       setError(isKeyError ? "bad_key" : "api_error");
       setMessages((prev) => {

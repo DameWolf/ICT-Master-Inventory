@@ -256,7 +256,30 @@ function getStoredFabPos() {
   return null;
 }
 
-export default function AIChat({ inventory, onOpenSettings }) {
+const VOICE_HELP_TEXT = `Voice commands:
+- Find item <asset tag or keyword>
+- Set status of <asset tag> to Functional|Defective|For Upgrade|For Replacement
+- Assign user of <asset tag> to <name>
+- Set department of <asset tag> to <department>`;
+
+function normalizeStatusLabel(raw) {
+  const value = String(raw || "").trim().toLowerCase();
+  if (!value) return null;
+  if (value === "functional") return "Functional";
+  if (value === "defective") return "Defective";
+  if (value === "for upgrade" || value === "upgrade") return "For Upgrade";
+  if (value === "for replacement" || value === "replacement") return "For Replacement";
+  return null;
+}
+
+export default function AIChat({
+  inventory,
+  onOpenSettings,
+  onUpdateItem,
+  onAddItem,
+  onDeleteItem,
+  onRequireAuth,
+}) {
   const [open, setOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputVal, setInputVal] = useState("");
@@ -277,7 +300,7 @@ export default function AIChat({ inventory, onOpenSettings }) {
   });
   const [speakingMsgIndex, setSpeakingMsgIndex] = useState(-1);
   const [voiceMode, setVoiceMode] = useState(false); // true when user initiated via mic
-  const { messages, isLoading, error, setError, sendMessage, clearChat, stopGeneration } =
+  const { messages, isLoading, error, setError, sendMessage, addLocalMessage, clearChat, stopGeneration } =
     useAIChat();
 
   const {
@@ -415,7 +438,10 @@ export default function AIChat({ inventory, onOpenSettings }) {
     if (!text || isLoading) return;
     setInputVal("");
     const prevMsgCount = messages.length;
-    await sendMessage(text, inventory, { replyMode });
+    const handled = await handleVoiceOrCommandAction(text);
+    if (!handled) {
+      await sendMessage(text, inventory, { replyMode });
+    }
     setRecentAIQueries(getRecentAIQueries());
   }, [inputVal, isLoading, sendMessage, inventory, messages.length, replyMode]);
 
@@ -425,6 +451,137 @@ export default function AIChat({ inventory, onOpenSettings }) {
       handleSend();
     }
   };
+
+  const findInventoryMatches = useCallback((queryText) => {
+    const q = String(queryText || "").trim().toLowerCase();
+    if (!q) return [];
+    return (inventory || []).filter((item) => {
+      const haystack = [
+        item.assetTag,
+        item.name,
+        item.deviceType,
+        item.department,
+        item.assignedUser,
+        item.campus,
+        item.category,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [inventory]);
+
+  const findSingleByAssetTag = useCallback((assetTagLike) => {
+    const q = String(assetTagLike || "").trim().toLowerCase();
+    if (!q) return null;
+    return (inventory || []).find((item) => String(item.assetTag || "").trim().toLowerCase() === q) || null;
+  }, [inventory]);
+
+  const canMutate = useCallback(() => {
+    if (!onRequireAuth) return true;
+    return onRequireAuth();
+  }, [onRequireAuth]);
+
+  const handleVoiceOrCommandAction = useCallback(async (rawText) => {
+    const text = String(rawText || "").trim();
+    if (!text) return false;
+
+    const findMatch = text.match(/^(?:find|search|look\s*up|show)\s+(?:item\s+)?(.+)$/i);
+    if (findMatch) {
+      const query = findMatch[1].trim();
+      const matches = findInventoryMatches(query).slice(0, 6);
+      addLocalMessage("user", text);
+      if (matches.length === 0) {
+        addLocalMessage("assistant", `No inventory items found for "${query}".`);
+      } else {
+        const lines = matches.map((m) => `- ${m.assetTag || "(no tag)"} | ${m.deviceType || m.name || "Unknown"} | ${m.status || "Unknown"} | ${m.department || "Unknown"}`);
+        addLocalMessage("assistant", `Found ${matches.length} matching item(s):\n${lines.join("\n")}`);
+      }
+      return true;
+    }
+
+    const statusMatch = text.match(/^(?:set|update|change)\s+(?:the\s+)?status\s+(?:of\s+)?(.+?)\s+(?:to|as)\s+(.+)$/i);
+    if (statusMatch) {
+      const assetTag = statusMatch[1].trim();
+      const status = normalizeStatusLabel(statusMatch[2]);
+      addLocalMessage("user", text);
+      if (!status) {
+        addLocalMessage("assistant", `I couldn't map that status. Use Functional, Defective, For Upgrade, or For Replacement.\n\n${VOICE_HELP_TEXT}`);
+        return true;
+      }
+      const item = findSingleByAssetTag(assetTag);
+      if (!item) {
+        addLocalMessage("assistant", `I couldn't find asset tag "${assetTag}".`);
+        return true;
+      }
+      if (!canMutate()) {
+        addLocalMessage("assistant", "Sign in is required before editing inventory records.");
+        return true;
+      }
+      if (typeof onUpdateItem === "function") {
+        await onUpdateItem(item.id, { status });
+        addLocalMessage("assistant", `Updated ${item.assetTag || item.id} status to ${status}.`);
+      } else {
+        addLocalMessage("assistant", "Update action is not available in this context.");
+      }
+      return true;
+    }
+
+    const userAssignMatch = text.match(/^(?:assign|set)\s+(?:user|assigned\s+user)\s+(?:of\s+)?(.+?)\s+to\s+(.+)$/i);
+    if (userAssignMatch) {
+      const assetTag = userAssignMatch[1].trim();
+      const assignedUser = userAssignMatch[2].trim();
+      addLocalMessage("user", text);
+      const item = findSingleByAssetTag(assetTag);
+      if (!item) {
+        addLocalMessage("assistant", `I couldn't find asset tag "${assetTag}".`);
+        return true;
+      }
+      if (!canMutate()) {
+        addLocalMessage("assistant", "Sign in is required before editing inventory records.");
+        return true;
+      }
+      if (typeof onUpdateItem === "function") {
+        await onUpdateItem(item.id, { assignedUser });
+        addLocalMessage("assistant", `Updated ${item.assetTag || item.id} assigned user to ${assignedUser}.`);
+      } else {
+        addLocalMessage("assistant", "Update action is not available in this context.");
+      }
+      return true;
+    }
+
+    const departmentMatch = text.match(/^(?:set|change|update)\s+department\s+(?:of\s+)?(.+?)\s+to\s+(.+)$/i);
+    if (departmentMatch) {
+      const assetTag = departmentMatch[1].trim();
+      const department = departmentMatch[2].trim();
+      addLocalMessage("user", text);
+      const item = findSingleByAssetTag(assetTag);
+      if (!item) {
+        addLocalMessage("assistant", `I couldn't find asset tag "${assetTag}".`);
+        return true;
+      }
+      if (!canMutate()) {
+        addLocalMessage("assistant", "Sign in is required before editing inventory records.");
+        return true;
+      }
+      if (typeof onUpdateItem === "function") {
+        await onUpdateItem(item.id, { department });
+        addLocalMessage("assistant", `Updated ${item.assetTag || item.id} department to ${department}.`);
+      } else {
+        addLocalMessage("assistant", "Update action is not available in this context.");
+      }
+      return true;
+    }
+
+    return false;
+  }, [
+    addLocalMessage,
+    canMutate,
+    findInventoryMatches,
+    findSingleByAssetTag,
+    onUpdateItem,
+  ]);
 
   // ── Voice: mic toggle ──
   const handleMicToggle = useCallback(() => {
@@ -441,13 +598,19 @@ export default function AIChat({ inventory, onOpenSettings }) {
         // Auto-send when speech ends
         if (finalText.trim() && !isLoading) {
           setInputVal("");
-          sendMessage(finalText.trim(), inventory, { replyMode }).finally(() => {
+          handleVoiceOrCommandAction(finalText.trim()).then((handled) => {
+            if (!handled) {
+              sendMessage(finalText.trim(), inventory, { replyMode }).finally(() => {
+                setRecentAIQueries(getRecentAIQueries());
+              });
+              return;
+            }
             setRecentAIQueries(getRecentAIQueries());
           });
         }
       });
     }
-  }, [isListening, stopListening, startListening, transcript, isLoading, sendMessage, inventory, replyMode]);
+  }, [isListening, stopListening, startListening, transcript, isLoading, sendMessage, inventory, replyMode, handleVoiceOrCommandAction]);
 
   useEffect(() => {
     if (!wakeWordEnabled || !WakeSpeechRecognition || !sttSupported) {
@@ -499,7 +662,13 @@ export default function AIChat({ inventory, onOpenSettings }) {
           startListening((finalText) => {
             if (finalText.trim() && !isLoading) {
               setInputVal("");
-              sendMessage(finalText.trim(), inventory, { replyMode }).finally(() => {
+              handleVoiceOrCommandAction(finalText.trim()).then((handled) => {
+                if (!handled) {
+                  sendMessage(finalText.trim(), inventory, { replyMode }).finally(() => {
+                    setRecentAIQueries(getRecentAIQueries());
+                  });
+                  return;
+                }
                 setRecentAIQueries(getRecentAIQueries());
               });
             }
@@ -542,7 +711,7 @@ export default function AIChat({ inventory, onOpenSettings }) {
         recognition.stop();
       } catch {}
     };
-  }, [wakeWordEnabled, sttSupported, isListening, isLoading, startListening, sendMessage, inventory, replyMode]);
+  }, [wakeWordEnabled, sttSupported, isListening, isLoading, startListening, sendMessage, inventory, replyMode, handleVoiceOrCommandAction]);
 
   // ── Update input with live transcript ──
   useEffect(() => {

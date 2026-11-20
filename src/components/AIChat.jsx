@@ -268,6 +268,8 @@ export default function AIChat({ inventory, onOpenSettings }) {
     setSelectedVoiceURI,
     speechRate,
     setSpeechRate,
+    expressiveVoice,
+    setExpressiveVoice,
     autoSpeak,
     setAutoSpeak,
   } = useVoice();
@@ -633,6 +635,19 @@ export default function AIChat({ inventory, onOpenSettings }) {
                     <span className="ai-voice-toggle-thumb" />
                   </span>
                   {autoSpeak ? "On" : "Off"}
+                </button>
+              </div>
+              <div className="ai-voice-settings-row">
+                <label className="ai-voice-label">Natural voice</label>
+                <button
+                  className={`ai-voice-toggle ${expressiveVoice ? "ai-voice-toggle--on" : ""}`}
+                  onClick={() => setExpressiveVoice(!expressiveVoice)}
+                  aria-label="Toggle natural voice variation"
+                >
+                  <span className="ai-voice-toggle-track">
+                    <span className="ai-voice-toggle-thumb" />
+                  </span>
+                  {expressiveVoice ? "On" : "Off"}
                 </button>
               </div>
               {!sttSupported && (

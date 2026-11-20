@@ -26,6 +26,23 @@ function saveVoiceSettings(settings) {
   } catch {}
 }
 
+function scoreVoice(voice) {
+  const name = (voice?.name || "").toLowerCase();
+  const lang = (voice?.lang || "").toLowerCase();
+  let score = 0;
+
+  if (lang.startsWith("en-us")) score += 20;
+  else if (lang.startsWith("en-gb")) score += 16;
+  else if (lang.startsWith("en")) score += 12;
+
+  if (/neural|natural|wavenet|online|premium|enhanced/.test(name)) score += 30;
+  if (/microsoft|google|apple/.test(name)) score += 18;
+  if (/aria|jenny|guy|sara|davis|ryan|zira|emma/.test(name)) score += 8;
+
+  if (/default|espeak|compact/.test(name)) score -= 20;
+  return score;
+}
+
 // ── Strip markdown for cleaner speech ────────────────────────
 function stripMarkdownForSpeech(text) {
   if (!text) return "";
@@ -43,9 +60,59 @@ function stripMarkdownForSpeech(text) {
     // Clean bullet points
     .replace(/^[-•*]\s+/gm, "")
     .replace(/^\d+\.\s+/gm, "")
+    // Make technical text easier to hear
+    .replace(/\bAI\b/g, "A I")
+    .replace(/\bICT\b/g, "I C T")
+    .replace(/\bIT\b/g, "I T")
+    .replace(/\bPM\b/g, "P M")
+    .replace(/>=/g, "greater than or equal to")
+    .replace(/<=/g, "less than or equal to")
+    .replace(/\bvs\.?\b/gi, "versus")
+    .replace(/\bdept\b/gi, "department")
+    .replace(/\bqty\b/gi, "quantity")
+    .replace(/\bproc\b/gi, "procurement")
+    .replace(/%/g, " percent")
     // Clean excess whitespace
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function computeProsodyForChunk(chunk, baseRate, expressive) {
+  const text = String(chunk || "");
+  const hasQuestion = text.includes("?");
+  const hasExclamation = text.includes("!");
+  const hasNumbers = /\d/.test(text);
+  const isHeadingLike = /^[A-Z\s\d\-:]{8,}$/.test(text.trim());
+
+  let rate = baseRate;
+  let pitch = 1.0;
+
+  if (hasQuestion) {
+    rate -= 0.03;
+    pitch += 0.07;
+  }
+  if (hasExclamation) {
+    rate += 0.02;
+    pitch += 0.05;
+  }
+  if (hasNumbers) {
+    rate -= 0.03;
+  }
+  if (isHeadingLike) {
+    rate -= 0.05;
+    pitch += 0.02;
+  }
+
+  if (expressive) {
+    const jitter = (Math.random() - 0.5) * 0.04;
+    rate += jitter;
+    pitch += (Math.random() - 0.5) * 0.06;
+  }
+
+  return {
+    rate: Math.max(0.75, Math.min(1.25, rate)),
+    pitch: Math.max(0.85, Math.min(1.25, pitch)),
+  };
 }
 
 // ── Hook ─────────────────────────────────────────────────────
@@ -60,6 +127,9 @@ export function useVoice() {
   );
   const [speechRate, setSpeechRate] = useState(
     () => loadVoiceSettings().rate || 1.0
+  );
+  const [expressiveVoice, setExpressiveVoice] = useState(
+    () => loadVoiceSettings().expressiveVoice !== false
   );
   const [autoSpeak, setAutoSpeak] = useState(
     () => loadVoiceSettings().autoSpeak !== false // default true
@@ -83,13 +153,9 @@ export function useVoice() {
       if (available.length > 0) {
         setVoices(available);
         if (!selectedVoiceURI) {
-          const preferred = available.find(
-            (v) =>
-              v.lang.startsWith("en") &&
-              (v.name.includes("Google") ||
-                v.name.includes("Microsoft") ||
-                v.name.includes("Natural"))
-          );
+          const preferred = [...available]
+            .filter((v) => v.lang?.toLowerCase().startsWith("en"))
+            .sort((a, b) => scoreVoice(b) - scoreVoice(a))[0];
           if (preferred) {
             setSelectedVoiceURI(preferred.voiceURI);
           }
@@ -107,9 +173,10 @@ export function useVoice() {
     saveVoiceSettings({
       voiceURI: selectedVoiceURI,
       rate: speechRate,
+      expressiveVoice,
       autoSpeak,
     });
-  }, [selectedVoiceURI, speechRate, autoSpeak]);
+  }, [selectedVoiceURI, speechRate, expressiveVoice, autoSpeak]);
 
   // ── Speech-to-Text ─────────────────────────────────────────
   const startListening = useCallback(
@@ -221,8 +288,9 @@ export function useVoice() {
         }
 
         const utterance = new SpeechSynthesisUtterance(chunks[chunkIndex]);
-        utterance.rate = speechRate;
-        utterance.pitch = 1.0;
+        const prosody = computeProsodyForChunk(chunks[chunkIndex], speechRate, expressiveVoice);
+        utterance.rate = prosody.rate;
+        utterance.pitch = prosody.pitch;
         utterance.volume = 1.0;
 
         // Set selected voice
@@ -234,7 +302,9 @@ export function useVoice() {
         utterance.onstart = () => setIsSpeaking(true);
         utterance.onend = () => {
           chunkIndex++;
-          speakNext();
+          // Add a tiny breathing pause so speech sounds less mechanical.
+          const pauseMs = expressiveVoice ? 80 + Math.floor(Math.random() * 100) : 20;
+          setTimeout(speakNext, pauseMs);
         };
         utterance.onerror = (e) => {
           if (e.error !== "canceled") {
@@ -249,7 +319,7 @@ export function useVoice() {
 
       speakNext();
     },
-    [selectedVoiceURI, speechRate, voices]
+    [selectedVoiceURI, speechRate, expressiveVoice, voices]
   );
 
   const stopSpeaking = useCallback(() => {
@@ -302,6 +372,8 @@ export function useVoice() {
     setSelectedVoiceURI,
     speechRate,
     setSpeechRate,
+    expressiveVoice,
+    setExpressiveVoice,
     autoSpeak,
     setAutoSpeak,
   };

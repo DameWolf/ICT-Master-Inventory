@@ -10,6 +10,7 @@ const STORAGE_KEY_MSGS = "ict_ai_messages";
 const MAX_STORED_MSGS = 200; // max messages persisted to localStorage
 const MAX_API_HISTORY = 8; // last N messages sent to model API per request (smaller = faster)
 const MAX_CONTEXT_ROWS = 180; // cap row-level context to reduce token latency
+const VALID_REPLY_MODES = new Set(["technical", "executive", "brief"]);
 
 // ── API Key helpers ─────────────────────────────────────────
 // Priority: env variable (baked in at build) → localStorage (user-configured)
@@ -303,8 +304,37 @@ TOP DEVICE TYPES:
 ${topDevTypes}${rowSection}`;
 }
 
+function normalizeReplyMode(mode) {
+  const normalized = String(mode || "").trim().toLowerCase();
+  return VALID_REPLY_MODES.has(normalized) ? normalized : "technical";
+}
+
+function getReplyModeInstruction(mode) {
+  const normalized = normalizeReplyMode(mode);
+  if (normalized === "executive") {
+    return `## ACTIVE RESPONSE MODE: EXECUTIVE
+- Use decision-ready language for leaders.
+- Keep output concise and high-signal.
+- Prioritize business impact, risk, and priority ordering.
+- Default length target: 5-10 lines unless user asks for detail.`;
+  }
+
+  if (normalized === "brief") {
+    return `## ACTIVE RESPONSE MODE: BRIEF
+- Keep responses short and direct.
+- Use at most 3-6 bullets or a short paragraph.
+- Include only the most important metric(s) and conclusion.
+- Offer one optional follow-up question for deeper analysis.`;
+  }
+
+  return `## ACTIVE RESPONSE MODE: TECHNICAL
+- Use precise technical writing and explicit evidence.
+- Include exact counts, assumptions, and caveats where relevant.
+- Use compact structure with clear labels and consistent terminology.`;
+}
+
 // ── System prompt ────────────────────────────────────────────
-const SYSTEM_PROMPT = (context) => `You are an elite, highly accurate ICT Hardware Inventory Analyst & IT Asset Management Specialist for an educational institution. You have real-time access to the exact hardware inventory data provided below.
+const SYSTEM_PROMPT = (context, replyMode = "technical") => `You are an elite, highly accurate ICT Hardware Inventory Analyst & IT Asset Management Specialist for an educational institution. You have real-time access to the exact hardware inventory data provided below.
 
 ## ACCURACY & DATA-GROUNDING MANDATES
 1. **Zero Hallucination Policy**: Base ALL numerical counts, lists, asset tags, and statistics strictly on the provided context sections.
@@ -334,6 +364,8 @@ When asked for insights, executive reports, or recommendations, provide deep ana
 - Define acronyms once when first used if not obvious.
 - End complex responses with **1–3 Executive Action Steps**.
 - If the user asks for technical writing, use precise terminology and consistent units.
+
+${getReplyModeInstruction(replyMode)}
 
 ${context}`;
 
@@ -492,7 +524,7 @@ export function useAIChat() {
     saveMessages(messages);
   }, [messages]);
 
-  const sendMessage = useCallback(async (userText, inventory) => {
+  const sendMessage = useCallback(async (userText, inventory, options = {}) => {
     const preferredProvider = getAIProvider();
     const activeProvider = resolveProviderWithKey(preferredProvider);
     const apiKey = getAIKeyForProvider(activeProvider);
@@ -518,7 +550,8 @@ export function useAIChat() {
     try {
       // Build inventory context once per request
       const context = buildInventoryContext(inventory, userText);
-      const systemPrompt = SYSTEM_PROMPT(context);
+      const replyMode = normalizeReplyMode(options.replyMode);
+      const systemPrompt = SYSTEM_PROMPT(context, replyMode);
 
       // Add optimistic AI message placeholder
       const aiMsg = {

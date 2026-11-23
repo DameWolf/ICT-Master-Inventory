@@ -1,11 +1,16 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { EMBEDDED_OPENAI_API_KEY, EMBEDDED_GEMINI_API_KEY } from "../config/aiKeys";
+import {
+  EMBEDDED_OPENAI_API_KEY,
+  EMBEDDED_GEMINI_API_KEY,
+  EMBEDDED_ANTHROPIC_API_KEY,
+  EMBEDDED_ANTHROPIC_MODEL,
+  EMBEDDED_OPENROUTER_API_KEY,
+  EMBEDDED_OPENROUTER_MODEL,
+  EMBEDDED_AI_PROVIDER,
+} from "../config/aiKeys";
 
 // ── Storage keys ────────────────────────────────────────────
-const STORAGE_KEY_PROVIDER = "ict_ai_provider";
-const STORAGE_KEY_OPENAI = "ict_ai_key_openai";
-const STORAGE_KEY_GEMINI = "ict_ai_key";
 const STORAGE_KEY_MSGS = "ict_ai_messages";
 const STORAGE_KEY_RECENT_AI_QUERIES = "ict_ai_recent_queries";
 const MAX_STORED_MSGS = 200; // max messages persisted to localStorage
@@ -15,35 +20,55 @@ const VALID_REPLY_MODES = new Set(["technical", "executive", "brief", "report"])
 const MAX_RECENT_AI_QUERIES = 8;
 
 // ── API Key helpers ─────────────────────────────────────────
-// Priority: env variable (baked in at build) → localStorage (user-configured)
+// Priority: embedded constants → build-time env variables.
 const ENV_OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
 const ENV_GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
-const VALID_PROVIDERS = new Set(["openai", "gemini"]);
+const ENV_ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
+const ENV_OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || "";
+const VALID_PROVIDERS = new Set(["openai", "gemini", "openrouter", "anthropic"]);
+const PROVIDER_PRIORITY = ["openai", "gemini", "openrouter", "anthropic"];
+const CONFIGURED_PROVIDER = String(EMBEDDED_AI_PROVIDER || "").trim().toLowerCase();
+
+function normalizeProvider(provider) {
+  const normalized = String(provider || "").trim().toLowerCase();
+  return VALID_PROVIDERS.has(normalized) ? normalized : "openai";
+}
 
 export function getAIProvider() {
-  const stored = (localStorage.getItem(STORAGE_KEY_PROVIDER) || "").trim().toLowerCase();
-  if (VALID_PROVIDERS.has(stored)) return stored;
+  if (VALID_PROVIDERS.has(CONFIGURED_PROVIDER)) return CONFIGURED_PROVIDER;
+  for (const provider of PROVIDER_PRIORITY) {
+    if (hasAIKeyForProvider(provider)) return provider;
+  }
   return "openai";
 }
 
 export function setAIProvider(provider) {
-  const normalized = String(provider || "").trim().toLowerCase();
-  if (VALID_PROVIDERS.has(normalized)) {
-    localStorage.setItem(STORAGE_KEY_PROVIDER, normalized);
-  }
+  return normalizeProvider(provider);
 }
 
 export function getProviderLabel(provider) {
-  return provider === "gemini" ? "Google Gemini" : "OpenAI";
+  if (provider === "gemini") return "Google Gemini";
+  if (provider === "openrouter") return "OpenRouter";
+  if (provider === "anthropic") return "Anthropic";
+  return "OpenAI";
 }
 
 function getAIKeyForProvider(provider) {
-  if (provider === "gemini") {
+  const normalized = normalizeProvider(provider);
+  if (normalized === "gemini") {
     const embeddedGemini = EMBEDDED_GEMINI_API_KEY.trim();
-    return embeddedGemini || ENV_GEMINI_API_KEY.trim() || localStorage.getItem(STORAGE_KEY_GEMINI)?.trim() || "";
+    return embeddedGemini || ENV_GEMINI_API_KEY.trim() || "";
+  }
+  if (normalized === "openrouter") {
+    const embeddedOpenRouter = (EMBEDDED_OPENROUTER_API_KEY || "").trim();
+    return embeddedOpenRouter || ENV_OPENROUTER_API_KEY.trim() || "";
+  }
+  if (normalized === "anthropic") {
+    const embeddedAnthropic = (EMBEDDED_ANTHROPIC_API_KEY || "").trim();
+    return embeddedAnthropic || ENV_ANTHROPIC_API_KEY.trim() || "";
   }
   const embeddedOpenAI = EMBEDDED_OPENAI_API_KEY.trim();
-  return embeddedOpenAI || ENV_OPENAI_API_KEY.trim() || localStorage.getItem(STORAGE_KEY_OPENAI)?.trim() || "";
+  return embeddedOpenAI || ENV_OPENAI_API_KEY.trim() || "";
 }
 
 function hasAIKeyForProvider(provider) {
@@ -52,9 +77,32 @@ function hasAIKeyForProvider(provider) {
 
 function resolveProviderWithKey(preferredProvider) {
   if (hasAIKeyForProvider(preferredProvider)) return preferredProvider;
-  if (preferredProvider !== "openai" && hasAIKeyForProvider("openai")) return "openai";
-  if (preferredProvider !== "gemini" && hasAIKeyForProvider("gemini")) return "gemini";
+  for (const provider of PROVIDER_PRIORITY) {
+    if (provider !== preferredProvider && hasAIKeyForProvider(provider)) return provider;
+  }
   return preferredProvider;
+}
+
+function getProviderRequestCandidates(preferredProvider) {
+  const preferred = normalizeProvider(preferredProvider);
+  const orderedProviders = [
+    preferred,
+    ...PROVIDER_PRIORITY.filter((provider) => provider !== preferred),
+  ];
+  const candidates = [];
+
+  const add = (provider, apiKey) => {
+    const trimmed = String(apiKey || "").trim();
+    if (!trimmed) return;
+    const exists = candidates.some((c) => c.provider === provider && c.apiKey === trimmed);
+    if (!exists) candidates.push({ provider, apiKey: trimmed });
+  };
+
+  for (const provider of orderedProviders) {
+    add(provider, getAIKeyForProvider(provider));
+  }
+
+  return candidates;
 }
 
 export function getAIKey(provider = null) {
@@ -66,18 +114,12 @@ export function getAIKey(provider = null) {
   return getAIKeyForProvider(providerWithKey);
 }
 export function setAIKey(key, provider = getAIProvider()) {
-  const trimmedKey = key.trim();
-  const storageKey = provider === "gemini" ? STORAGE_KEY_GEMINI : STORAGE_KEY_OPENAI;
-  if (trimmedKey) {
-    localStorage.setItem(storageKey, trimmedKey);
-  } else {
-    localStorage.removeItem(storageKey);
-  }
+  return { key: key?.trim?.() || "", provider: normalizeProvider(provider) };
 }
 
-// Returns true if a key is available from ANY source (env OR localStorage)
+// Returns true if a key is available from embedded config or build-time env.
 export function hasAnyAIKey() {
-  return hasAIKeyForProvider("openai") || hasAIKeyForProvider("gemini");
+  return PROVIDER_PRIORITY.some((provider) => hasAIKeyForProvider(provider));
 }
 
 // ── Message persistence ─────────────────────────────────────
@@ -414,14 +456,30 @@ ${context}`;
 function isAuthError(errText) {
   const text = (errText || "").toLowerCase();
   return (
+    text.includes("incorrect api key") ||
+    text.includes("invalid api key") ||
+    text.includes("api key invalid") ||
     text.includes("api_key") ||
     text.includes("api key") ||
     text.includes("invalid key") ||
-    text.includes("not valid") ||
     text.includes("unauthorized") ||
     text.includes("forbidden") ||
     text.includes("401") ||
     text.includes("403")
+  );
+}
+
+function isQuotaOrCapacityError(errText) {
+  const text = (errText || "").toLowerCase();
+  return (
+    text.includes("quota") ||
+    text.includes("credit balance") ||
+    text.includes("too many requests") ||
+    text.includes("resource exhausted") ||
+    text.includes("high demand") ||
+    text.includes("rate limit") ||
+    text.includes("429") ||
+    text.includes("503")
   );
 }
 
@@ -432,9 +490,29 @@ function toOpenAIHistory(messages) {
     .map((m) => ({ role: m.role, content: m.content || " " }));
 }
 
+function toAnthropicHistory(messages) {
+  return messages
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .slice(-MAX_API_HISTORY)
+    .map((m) => ({ role: m.role, content: [{ type: "text", text: m.content || " " }] }));
+}
+
 async function* createOpenAIStream({ apiKey, userText, systemPrompt, previousMessages }) {
-  const body = {
+  yield* createOpenAICompatibleStream({
+    apiKey,
+    endpoint: "https://api.openai.com/v1/chat/completions",
     model: "gpt-4o-mini",
+    userText,
+    systemPrompt,
+    previousMessages,
+    extraHeaders: {},
+    providerName: "OpenAI",
+  });
+}
+
+async function* createOpenAICompatibleStream({ apiKey, endpoint, model, userText, systemPrompt, previousMessages, extraHeaders, providerName }) {
+  const body = {
+    model,
     stream: true,
     temperature: 0.15,
     max_tokens: 1000,
@@ -445,11 +523,12 @@ async function* createOpenAIStream({ apiKey, userText, systemPrompt, previousMes
     ],
   };
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
+      ...(extraHeaders || {}),
     },
     body: JSON.stringify(body),
   });
@@ -462,11 +541,11 @@ async function* createOpenAIStream({ apiKey, userText, systemPrompt, previousMes
     } catch {
       details = "";
     }
-    throw new Error(`OpenAI request failed (${response.status}): ${details || response.statusText}`);
+    throw new Error(`${providerName} request failed (${response.status}): ${details || response.statusText}`);
   }
 
   if (!response.body) {
-    throw new Error("OpenAI response did not include a stream body.");
+    throw new Error(`${providerName} response did not include a stream body.`);
   }
 
   const reader = response.body.getReader();
@@ -501,6 +580,66 @@ async function* createOpenAIStream({ apiKey, userText, systemPrompt, previousMes
   }
 }
 
+async function* createOpenRouterStream({ apiKey, userText, systemPrompt, previousMessages }) {
+  const model = (EMBEDDED_OPENROUTER_MODEL || "openai/gpt-4o-mini").trim();
+  yield* createOpenAICompatibleStream({
+    apiKey,
+    endpoint: "https://openrouter.ai/api/v1/chat/completions",
+    model,
+    userText,
+    systemPrompt,
+    previousMessages,
+    extraHeaders: {
+      "HTTP-Referer": window.location.origin,
+      "X-Title": "ICT Hardware Inventory",
+    },
+    providerName: "OpenRouter",
+  });
+}
+
+async function* createAnthropicStream({ apiKey, userText, systemPrompt, previousMessages }) {
+  const model = (EMBEDDED_ANTHROPIC_MODEL || "claude-3-5-sonnet-latest").trim();
+  const body = {
+    model,
+    max_tokens: 1000,
+    temperature: 0.15,
+    system: systemPrompt,
+    messages: [...toAnthropicHistory(previousMessages), { role: "user", content: [{ type: "text", text: userText }] }],
+  };
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    let details = "";
+    try {
+      const json = await response.json();
+      details = json?.error?.message || "";
+    } catch {
+      details = "";
+    }
+    throw new Error(`Anthropic request failed (${response.status}): ${details || response.statusText}`);
+  }
+
+  const data = await response.json();
+  const text = Array.isArray(data?.content)
+    ? data.content.filter((c) => c?.type === "text").map((c) => c?.text || "").join("")
+    : "";
+
+  if (!text.trim()) {
+    throw new Error("Anthropic response did not include text content.");
+  }
+
+  yield text;
+}
+
 async function* createGeminiStream({ apiKey, userText, systemPrompt, previousMessages }) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const recentMessages = previousMessages.slice(-MAX_API_HISTORY);
@@ -510,11 +649,13 @@ async function* createGeminiStream({ apiKey, userText, systemPrompt, previousMes
   }));
 
   const candidateModels = [
+    "gemini-3.8-flash",
+    "gemini-3.1-pro-preview",
+    "gemini-flash-latest",
+    "gemini-pro-latest",
     "gemini-2.5-flash",
     "gemini-2.5-pro",
     "gemini-2.0-flash",
-    "gemini-flash-latest",
-    "gemini-pro-latest",
   ];
 
   let result = null;
@@ -569,16 +710,9 @@ export function useAIChat() {
 
   const sendMessage = useCallback(async (userText, inventory, options = {}) => {
     const preferredProvider = getAIProvider();
-    const providerOrder = [
-      preferredProvider,
-      preferredProvider === "openai" ? "gemini" : "openai",
-    ];
-    const candidateProviders = providerOrder.filter(
-      (provider, idx, arr) =>
-        arr.indexOf(provider) === idx && hasAIKeyForProvider(provider)
-    );
+    const providerCandidates = getProviderRequestCandidates(preferredProvider);
 
-    if (candidateProviders.length === 0) {
+    if (providerCandidates.length === 0) {
       setError("no_key");
       return;
     }
@@ -616,9 +750,9 @@ export function useAIChat() {
       let streamSucceeded = false;
       let lastErr = null;
       let authFailureCount = 0;
+      let quotaOrCapacityFailureCount = 0;
 
-      for (const provider of candidateProviders) {
-        const apiKey = getAIKeyForProvider(provider);
+      for (const { provider, apiKey } of providerCandidates) {
         if (!apiKey) continue;
 
         let providerText = "";
@@ -626,6 +760,20 @@ export function useAIChat() {
           const stream =
             provider === "gemini"
               ? createGeminiStream({
+                  apiKey,
+                  userText,
+                  systemPrompt,
+                  previousMessages: prevMessages,
+                })
+              : provider === "anthropic"
+              ? createAnthropicStream({
+                  apiKey,
+                  userText,
+                  systemPrompt,
+                  previousMessages: prevMessages,
+                })
+              : provider === "openrouter"
+              ? createOpenRouterStream({
                   apiKey,
                   userText,
                   systemPrompt,
@@ -658,6 +806,8 @@ export function useAIChat() {
           const errText = `${err?.message || ""} ${err?.status || ""}`;
           if (isAuthError(errText)) {
             authFailureCount += 1;
+          } else if (isQuotaOrCapacityError(errText)) {
+            quotaOrCapacityFailureCount += 1;
           }
           // Do not fall back after partial generation to avoid mixed outputs.
           if (providerText.trim()) {
@@ -667,10 +817,15 @@ export function useAIChat() {
       }
 
       if (!streamSucceeded) {
-        if (authFailureCount >= candidateProviders.length) {
+        if (authFailureCount >= providerCandidates.length) {
           const authError = new Error("All configured provider keys were rejected.");
           authError.status = 401;
           throw authError;
+        }
+        if (quotaOrCapacityFailureCount >= providerCandidates.length) {
+          const quotaError = new Error("All configured providers are currently limited by quota, billing, or temporary capacity.");
+          quotaError.status = 429;
+          throw quotaError;
         }
         throw lastErr || new Error("All configured providers failed.");
       }
@@ -684,8 +839,9 @@ export function useAIChat() {
       console.error("AI API Error:", err);
       const errText = `${err?.message || ""} ${err?.status || ""}`;
       const isKeyError = isAuthError(errText);
+      const isQuotaError = isQuotaOrCapacityError(errText);
 
-      setError(isKeyError ? "bad_key" : "api_error");
+      setError(isKeyError ? "bad_key" : isQuotaError ? "quota_or_capacity" : "api_error");
       setMessages((prev) => {
         const last = prev[prev.length - 1];
         return last?.role === "assistant" && last?.streaming

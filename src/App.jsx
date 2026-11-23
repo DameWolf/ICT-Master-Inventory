@@ -4,7 +4,6 @@ import HomePage from "./components/HomePage";
 import Dashboard from "./components/Dashboard";
 import InventoryTable from "./components/InventoryTable";
 import SettingsModal from "./components/SettingsModal";
-import SupabaseLoginModal from "./components/SupabaseLoginModal";
 import QRScanner from "./components/QRScanner";
 import Toast from "./components/Toast";
 import AIChat from "./components/AIChat";
@@ -12,7 +11,6 @@ import PMChecklist from "./components/PMChecklist";
 import ServiceRequestModal from "./components/ServiceRequestModal";
 import { useSheetInventory } from "./hooks/useSheetInventory";
 import useServiceRequests from "./hooks/useServiceRequests";
-import { supabase } from "./lib/supabase";
 import "./App.css";
 
 function safeStorageGet(key, fallback = null) {
@@ -101,6 +99,7 @@ class AppErrorBoundary extends Component {
 }
 
 function App() {
+  const ADMIN_LOGIN_DISABLED = true;
   const APP_CACHE_BUSTER = "ict_app_cache_v2_google_sheets_primary_2026_11_09";
   const SESSION_BOOTSTRAP_KEY = "ict_session_bootstrap_done";
 
@@ -167,7 +166,6 @@ function App() {
     return safeStorageGet("ict_current_view", "home");
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [loginOpen, setLoginOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [pmChecklistOpen, setPMChecklistOpen] = useState(false);
@@ -231,30 +229,11 @@ function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    if (!supabase) return;
-
-    let active = true;
-
-    async function syncSession() {
-      const { data } = await supabase.auth.getSession();
-      if (!active) return;
-      const session = data?.session;
-      setIsAuthenticated(Boolean(session));
-      setUserEmail(session?.user?.email || "");
+    if (ADMIN_LOGIN_DISABLED) {
+      setIsAuthenticated(false);
+      setUserEmail("");
     }
-
-    syncSession();
-
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(Boolean(session));
-      setUserEmail(session?.user?.email || "");
-    });
-
-    return () => {
-      active = false;
-      subscription?.subscription?.unsubscribe?.();
-    };
-  }, []);
+  }, [ADMIN_LOGIN_DISABLED]);
 
   const toggleDarkMode = useCallback(() => {
     setDarkMode((prev) => !prev);
@@ -281,19 +260,15 @@ function App() {
   }, []);
 
   const handleSignOut = useCallback(async () => {
-    if (!supabase) return;
-    await supabase.auth.signOut();
     setIsAuthenticated(false);
     setUserEmail("");
   }, []);
 
   const requireAuth = useCallback(() => {
-    if (!isAuthenticated) {
-      setLoginOpen(true);
-      return false;
-    }
+    if (ADMIN_LOGIN_DISABLED) return true;
+    if (!isAuthenticated) return false;
     return true;
-  }, [isAuthenticated]);
+  }, [isAuthenticated, ADMIN_LOGIN_DISABLED]);
 
   const handleOpenServiceRequest = useCallback((item = null) => {
     setServiceRequestTargetItem(item);
@@ -343,7 +318,7 @@ function App() {
         activeView={view}
         isAuthenticated={isAuthenticated}
         userEmail={userEmail}
-        onOpenSupabaseLogin={() => setLoginOpen(true)}
+        disableAdminLogin={ADMIN_LOGIN_DISABLED}
         onSignOut={handleSignOut}
       />
 
@@ -380,7 +355,6 @@ function App() {
       </main>
 
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
-      {loginOpen && <SupabaseLoginModal onClose={() => setLoginOpen(false)} onAuthenticated={() => setLoginOpen(false)} />}
 
       {pmChecklistOpen && (
         <PMChecklist

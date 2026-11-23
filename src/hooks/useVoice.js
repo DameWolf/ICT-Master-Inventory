@@ -187,6 +187,7 @@ export function useVoice() {
   const [transcript, setTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isSpeechPaused, setIsSpeechPaused] = useState(false);
   const [voices, setVoices] = useState([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState(
     () => loadVoiceSettings().voiceURI || ""
@@ -475,6 +476,7 @@ export function useVoice() {
     if (!text) return;
 
     stopRequestedRef.current = false;
+    setIsSpeechPaused(false);
     if (synth) synth.cancel();
     if (audioRef.current) {
       audioRef.current.pause();
@@ -494,6 +496,38 @@ export function useVoice() {
     speakWithBrowser(text);
   }, [speechEngine, elevenLabsAvailable, speakWithElevenLabs, speakWithBrowser]);
 
+  const pauseSpeaking = useCallback(() => {
+    if (!isSpeaking || isSpeechPaused) return;
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setIsSpeechPaused(true);
+      return;
+    }
+
+    if (synth && typeof synth.pause === "function") {
+      synth.pause();
+      setIsSpeechPaused(true);
+    }
+  }, [isSpeaking, isSpeechPaused]);
+
+  const resumeSpeaking = useCallback(() => {
+    if (!isSpeechPaused) return;
+
+    if (audioRef.current) {
+      audioRef.current.play().catch((err) => {
+        console.warn("Audio resume failed:", err);
+      });
+      setIsSpeechPaused(false);
+      return;
+    }
+
+    if (synth && typeof synth.resume === "function") {
+      synth.resume();
+      setIsSpeechPaused(false);
+    }
+  }, [isSpeechPaused]);
+
   const stopSpeaking = useCallback(() => {
     stopRequestedRef.current = true;
     if (synth) {
@@ -508,6 +542,7 @@ export function useVoice() {
       URL.revokeObjectURL(audioUrlRef.current);
       audioUrlRef.current = "";
     }
+    setIsSpeechPaused(false);
     setIsSpeaking(false);
   }, []);
 
@@ -550,7 +585,10 @@ export function useVoice() {
 
     // TTS
     isSpeaking,
+    isSpeechPaused,
     speak,
+    pauseSpeaking,
+    resumeSpeaking,
     stopSpeaking,
     replayMessage,
     ttsSupported,

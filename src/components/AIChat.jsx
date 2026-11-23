@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useAIChat, getAIKey, setAIKey, hasAnyAIKey, getRecentAIQueries } from "../hooks/useAIChat";
+import { useAIChat, hasAnyAIKey, getRecentAIQueries } from "../hooks/useAIChat";
 import { useVoice } from "../hooks/useVoice";
 import aiRobotIcon from "../assets/ai_assistant.png";
 import "./AIChat.css";
@@ -14,6 +14,7 @@ const WAKE_PATTERNS = [
   /\bok(?:ay)?\s+rachel\b/i,
   /\brachel\b/i,
 ];
+const WAKE_PREFIX_STRIP = /^(?:\s*(?:hey|ok(?:ay)?)\s+)?rachel\s*[,.:;-]*\s*/i;
 
 const SUGGESTED_PROMPTS = [
   "📊 What's the overall health of our inventory?",
@@ -210,26 +211,14 @@ function MessageBubble({ message, onReplay, isSpeakingThis, onStopSpeaking, ttsS
   );
 }
 
-function NoKeyScreen({ onOpenSettings }) {
+function NoKeyScreen() {
   return (
     <div className="ai-nokey">
       <div className="ai-nokey-icon">🔑</div>
-      <h3>Set up AI Assistant</h3>
+      <h3>AI is not configured</h3>
       <p>
-        To use the AI assistant, add your API key in Settings (OpenAI or Google Gemini).
-        Your key is stored only in this browser.
+        Add your provider and API key directly in src/config/aiKeys.js, then reload the app.
       </p>
-      <a
-        href="https://platform.openai.com/api-keys"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="ai-nokey-link"
-      >
-        Get an API key →
-      </a>
-      <button className="ai-nokey-btn" onClick={onOpenSettings} id="ai-open-settings">
-        ⚙️ Open Settings
-      </button>
     </div>
   );
 }
@@ -277,7 +266,6 @@ function normalizeStatusLabel(raw) {
 
 export default function AIChat({
   inventory,
-  onOpenSettings,
   onUpdateItem,
   onAddItem,
   onDeleteItem,
@@ -315,7 +303,10 @@ export default function AIChat({
     stopListening,
     sttSupported,
     isSpeaking,
+    isSpeechPaused,
     speak,
+    pauseSpeaking,
+    resumeSpeaking,
     stopSpeaking,
     replayMessage,
     ttsSupported,
@@ -524,12 +515,13 @@ export default function AIChat({
   }, [pendingVoiceAction, canMutate, addLocalMessage, onDeleteItem, onAddItem]);
 
   const handleVoiceOrCommandAction = useCallback(async (rawText) => {
-    const text = String(rawText || "").trim();
+    const originalText = String(rawText || "").trim();
+    const text = originalText.replace(WAKE_PREFIX_STRIP, "").trim();
     if (!text) return false;
 
     const isCancel = /^(?:cancel|abort|stop|nevermind|never mind)$/i.test(text);
     if (isCancel && pendingVoiceAction) {
-      addLocalMessage("user", text);
+      addLocalMessage("user", originalText);
       setPendingVoiceAction(null);
       addLocalMessage("assistant", "Pending voice command canceled.");
       return true;
@@ -537,7 +529,7 @@ export default function AIChat({
 
     const isConfirm = /^(?:confirm|yes|proceed|confirm\s+delete|confirm\s+create)$/i.test(text);
     if (isConfirm && pendingVoiceAction) {
-      addLocalMessage("user", text);
+      addLocalMessage("user", originalText);
       await executePendingVoiceAction();
       setPendingVoiceAction(null);
       return true;
@@ -547,7 +539,7 @@ export default function AIChat({
     if (findMatch) {
       const query = findMatch[1].trim();
       const matches = findInventoryMatches(query).slice(0, 6);
-      addLocalMessage("user", text);
+      addLocalMessage("user", originalText);
       if (matches.length === 0) {
         addLocalMessage("assistant", `No inventory items found for "${query}".`);
       } else {
@@ -561,7 +553,7 @@ export default function AIChat({
     if (statusMatch) {
       const assetTag = statusMatch[1].trim();
       const status = normalizeStatusLabel(statusMatch[2]);
-      addLocalMessage("user", text);
+      addLocalMessage("user", originalText);
       if (!status) {
         addLocalMessage("assistant", `I couldn't map that status. Use Functional, Defective, For Upgrade, or For Replacement.\n\n${VOICE_HELP_TEXT}`);
         return true;
@@ -588,7 +580,7 @@ export default function AIChat({
     if (userAssignMatch) {
       const assetTag = userAssignMatch[1].trim();
       const assignedUser = userAssignMatch[2].trim();
-      addLocalMessage("user", text);
+      addLocalMessage("user", originalText);
       const item = findSingleByAssetTag(assetTag);
       if (!item) {
         addLocalMessage("assistant", `I couldn't find asset tag "${assetTag}".`);
@@ -611,7 +603,7 @@ export default function AIChat({
     if (departmentMatch) {
       const assetTag = departmentMatch[1].trim();
       const department = departmentMatch[2].trim();
-      addLocalMessage("user", text);
+      addLocalMessage("user", originalText);
       const item = findSingleByAssetTag(assetTag);
       if (!item) {
         addLocalMessage("assistant", `I couldn't find asset tag "${assetTag}".`);
@@ -635,7 +627,7 @@ export default function AIChat({
       const deviceType = createMatch[1].trim();
       const assetTag = createMatch[2].trim();
       const immediateConfirm = /\bconfirm\b/i.test(text);
-      addLocalMessage("user", text);
+      addLocalMessage("user", originalText);
 
       if (!deviceType || !assetTag) {
         addLocalMessage("assistant", `Please include both device type and asset tag.\n\n${VOICE_HELP_TEXT}`);
@@ -688,7 +680,7 @@ export default function AIChat({
     if (deleteMatch) {
       const assetTag = deleteMatch[1].trim();
       const immediateConfirm = /\bconfirm\b/i.test(text);
-      addLocalMessage("user", text);
+      addLocalMessage("user", originalText);
       const item = findSingleByAssetTag(assetTag);
       if (!item) {
         addLocalMessage("assistant", `I couldn't find asset tag "${assetTag}".`);
@@ -913,11 +905,6 @@ export default function AIChat({
     inputRef.current?.focus();
   };
 
-  const handleOpenSettings = () => {
-    setOpen(false);
-    onOpenSettings?.();
-  };
-
   const showSuggestions = messages.length === 0 && hasKey;
 
   // Compute inline styles for button and panel position
@@ -1005,7 +992,7 @@ export default function AIChat({
               <div>
                 <div className="ai-header-title">AI Assistant</div>
                 <div className="ai-header-sub">
-                  Powered by OpenAI or Google Gemini
+                  Powered by embedded AI provider configuration
                   {messages.length > 0 && (
                     <span className="ai-memory-badge">🧠 {messages.length} msgs remembered</span>
                   )}
@@ -1029,6 +1016,26 @@ export default function AIChat({
                   aria-label="Voice settings"
                 >
                   🎙️
+                </button>
+              )}
+              {ttsSupported && isSpeaking && (
+                <button
+                  className="ai-icon-btn"
+                  onClick={isSpeechPaused ? resumeSpeaking : pauseSpeaking}
+                  title={isSpeechPaused ? "Resume AI voice" : "Pause AI voice"}
+                  aria-label={isSpeechPaused ? "Resume AI voice" : "Pause AI voice"}
+                >
+                  {isSpeechPaused ? "▶ Voice" : "⏸ Voice"}
+                </button>
+              )}
+              {ttsSupported && isSpeaking && (
+                <button
+                  className="ai-icon-btn ai-icon-btn--active"
+                  onClick={handleStopSpeaking}
+                  title="Stop or pause AI voice"
+                  aria-label="Stop AI voice"
+                >
+                  ⏹ Voice
                 </button>
               )}
               {messages.length > 0 && (
@@ -1200,7 +1207,7 @@ export default function AIChat({
           {/* Body */}
           <div className="ai-panel-body">
             {!hasKey ? (
-              <NoKeyScreen onOpenSettings={handleOpenSettings} />
+              <NoKeyScreen />
             ) : (
               <>
                 {/* Welcome / suggestions */}
@@ -1280,14 +1287,17 @@ export default function AIChat({
                 {/* Error banners */}
                 {error === "bad_key" && (
                   <div className="ai-error-banner">
-                    ❌ Invalid API key. <button onClick={handleOpenSettings}>Update in Settings →</button>
+                    ❌ The embedded API key was rejected by the provider. Update src/config/aiKeys.js.
                   </div>
                 )}
                 {error === "api_error" && (
                   <div className="ai-error-banner ai-error-banner--warn">
-                    ⚠️ Request failed. This usually means your selected API key is missing, invalid, or over quota.
-                    <br />
-                    <button onClick={handleOpenSettings}>⚙️ Add API Key in Settings →</button>
+                    ⚠️ Request failed. Verify the embedded key/provider in src/config/aiKeys.js, and check internet access or API quota.
+                  </div>
+                )}
+                {error === "quota_or_capacity" && (
+                  <div className="ai-error-banner ai-error-banner--warn">
+                    ⚠️ AI request blocked by provider quota, low credits, or temporary high demand. Add a backup key/provider in src/config/aiKeys.js (for example OpenRouter) and try again.
                   </div>
                 )}
               </>

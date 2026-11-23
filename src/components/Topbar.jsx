@@ -88,7 +88,7 @@ export default function Topbar({
   selectedCategory, onSelectCategory, onHome, onDashboard, onSettings, onScannerOpen, onOpenPMChecklist,
   onOpenServiceRequest,
   inventory = [], lastSynced, onSync, darkMode, onToggleDarkMode, activeView,
-  isAuthenticated = false, userEmail = "", onOpenSupabaseLogin, onSignOut,
+  isAuthenticated = false, userEmail = "", onOpenSupabaseLogin, onSignOut, disableAdminLogin = false,
 }) {
   const [openGroup, setOpenGroup] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -211,14 +211,16 @@ export default function Topbar({
           </button>
         )}
 
-        {isAuthenticated ? (
-          <button className="settings-btn" onClick={onSignOut} id="btn-signout" title={`Signed in as ${userEmail || "admin"}`}>
-            🚪
-          </button>
-        ) : (
-          <button className="settings-btn" onClick={onOpenSupabaseLogin} id="btn-admin-login" title="Admin Login">
-            🔐
-          </button>
+        {!disableAdminLogin && (
+          isAuthenticated ? (
+            <button className="settings-btn" onClick={onSignOut} id="btn-signout" title={`Signed in as ${userEmail || "admin"}`}>
+              🚪
+            </button>
+          ) : (
+            <button className="settings-btn" onClick={onOpenSupabaseLogin} id="btn-admin-login" title="Admin Login">
+              🔐
+            </button>
+          )
         )}
 
         <button className="settings-btn" onClick={onSettings} id="btn-settings" title="Settings">

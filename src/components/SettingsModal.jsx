@@ -1,26 +1,15 @@
 import React, { useState } from "react";
 import { getAppsScriptUrl, setAppsScriptUrl, pingAppsScript } from "../hooks/useAppsScript";
-import { getAIKey, setAIKey, getAIProvider, setAIProvider, getProviderLabel } from "../hooks/useAIChat";
 import "./SettingsModal.css";
 
 export default function SettingsModal({ onClose }) {
   const [url, setUrl]         = useState(getAppsScriptUrl);
   const [status, setStatus]   = useState(null);
   const [errMsg, setErrMsg]   = useState("");
-  const [aiProvider, setAiProvider] = useState(getAIProvider);
-  const [aiKey, setAiKeyLocal]  = useState(getAIKey);
-  const [showKey, setShowKey]   = useState(false);
 
   const handleSave = () => {
     setAppsScriptUrl(url.trim());
-    setAIProvider(aiProvider);
-    setAIKey(aiKey, aiProvider);
     onClose();
-  };
-
-  const handleProviderChange = (provider) => {
-    setAiProvider(provider);
-    setAiKeyLocal(getAIKey(provider));
   };
 
   const handleTest = async () => {
@@ -101,74 +90,6 @@ export default function SettingsModal({ onClose }) {
 
           <div className="settings-note">
             💡 Your URL is stored only in this browser's local storage. Edits made in the app will update the Google Sheet in real-time.
-          </div>
-
-          {/* ── AI Assistant Section ── */}
-          <div className="settings-divider" />
-
-          <div className="settings-section-title">✨ AI Assistant</div>
-
-          <div className="settings-field">
-            <label className="settings-label">AI Provider</label>
-            <select
-              className="settings-input"
-              value={aiProvider}
-              onChange={(e) => handleProviderChange(e.target.value)}
-            >
-              <option value="openai">OpenAI</option>
-              <option value="gemini">Google Gemini</option>
-            </select>
-          </div>
-
-          <div className="settings-field">
-            <label className="settings-label">{getProviderLabel(aiProvider)} API Key</label>
-            <div className="settings-key-wrap">
-              <input
-                className="settings-input"
-                type={showKey ? "text" : "password"}
-                placeholder={aiProvider === "openai" ? "sk-..." : "AIza..."}
-                value={aiKey}
-                onChange={(e) => setAiKeyLocal(e.target.value)}
-                id="settings-ai-key-input"
-                autoComplete="off"
-              />
-              <button
-                className="settings-show-key"
-                type="button"
-                onClick={() => setShowKey((v) => !v)}
-                aria-label={showKey ? "Hide key" : "Show key"}
-              >
-                {showKey ? "🙈" : "👁️"}
-              </button>
-            </div>
-          </div>
-
-          <div className="settings-note">
-            {aiProvider === "openai" ? (
-              <>
-                🔑 Create an API key at{" "}
-                <a
-                  href="https://platform.openai.com/api-keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="settings-link"
-                >
-                  platform.openai.com
-                </a>. Your key is stored locally and only sent directly to OpenAI.
-              </>
-            ) : (
-              <>
-                🔑 Get a key at{" "}
-                <a
-                  href="https://aistudio.google.com/app/apikey"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="settings-link"
-                >
-                  aistudio.google.com
-                </a>. Your key is stored locally and only sent directly to Google.
-              </>
-            )}
           </div>
         </div>
 

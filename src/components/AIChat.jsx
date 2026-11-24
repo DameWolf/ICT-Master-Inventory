@@ -1198,7 +1198,7 @@ export default function AIChat({
               )}
               {!elevenLabsAvailable && (
                 <div className="ai-voice-compat-warn">
-                  ℹ️ For premium voice, set EMBEDDED_ELEVENLABS_API_KEY in src/config/aiKeys.js
+                  ℹ️ For premium voice, set VITE_ELEVENLABS_API_KEY in .env.local
                 </div>
               )}
             </div>

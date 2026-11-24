@@ -1,13 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
-  EMBEDDED_OPENAI_API_KEY,
-  EMBEDDED_GEMINI_API_KEY,
-  EMBEDDED_ANTHROPIC_API_KEY,
-  EMBEDDED_ANTHROPIC_MODEL,
-  EMBEDDED_OPENROUTER_API_KEY,
-  EMBEDDED_OPENROUTER_MODEL,
-  EMBEDDED_AI_PROVIDER,
+  DEFAULT_AI_PROVIDER,
+  DEFAULT_ANTHROPIC_MODEL,
+  DEFAULT_OPENROUTER_MODEL,
 } from "../config/aiKeys";
 
 // ── Storage keys ────────────────────────────────────────────
@@ -20,14 +16,17 @@ const VALID_REPLY_MODES = new Set(["technical", "executive", "brief", "report"])
 const MAX_RECENT_AI_QUERIES = 8;
 
 // ── API Key helpers ─────────────────────────────────────────
-// Priority: embedded constants → build-time env variables.
+// Priority: build-time environment variables only.
 const ENV_OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
 const ENV_GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 const ENV_ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
 const ENV_OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || "";
+const ENV_AI_PROVIDER = import.meta.env.VITE_AI_PROVIDER || "";
+const ENV_ANTHROPIC_MODEL = import.meta.env.VITE_ANTHROPIC_MODEL || "";
+const ENV_OPENROUTER_MODEL = import.meta.env.VITE_OPENROUTER_MODEL || "";
 const VALID_PROVIDERS = new Set(["openai", "gemini", "openrouter", "anthropic"]);
 const PROVIDER_PRIORITY = ["openai", "gemini", "openrouter", "anthropic"];
-const CONFIGURED_PROVIDER = String(EMBEDDED_AI_PROVIDER || "").trim().toLowerCase();
+const CONFIGURED_PROVIDER = String(ENV_AI_PROVIDER || DEFAULT_AI_PROVIDER || "").trim().toLowerCase();
 
 function normalizeProvider(provider) {
   const normalized = String(provider || "").trim().toLowerCase();
@@ -56,19 +55,15 @@ export function getProviderLabel(provider) {
 function getAIKeyForProvider(provider) {
   const normalized = normalizeProvider(provider);
   if (normalized === "gemini") {
-    const embeddedGemini = EMBEDDED_GEMINI_API_KEY.trim();
-    return embeddedGemini || ENV_GEMINI_API_KEY.trim() || "";
+    return ENV_GEMINI_API_KEY.trim() || "";
   }
   if (normalized === "openrouter") {
-    const embeddedOpenRouter = (EMBEDDED_OPENROUTER_API_KEY || "").trim();
-    return embeddedOpenRouter || ENV_OPENROUTER_API_KEY.trim() || "";
+    return ENV_OPENROUTER_API_KEY.trim() || "";
   }
   if (normalized === "anthropic") {
-    const embeddedAnthropic = (EMBEDDED_ANTHROPIC_API_KEY || "").trim();
-    return embeddedAnthropic || ENV_ANTHROPIC_API_KEY.trim() || "";
+    return ENV_ANTHROPIC_API_KEY.trim() || "";
   }
-  const embeddedOpenAI = EMBEDDED_OPENAI_API_KEY.trim();
-  return embeddedOpenAI || ENV_OPENAI_API_KEY.trim() || "";
+  return ENV_OPENAI_API_KEY.trim() || "";
 }
 
 function hasAIKeyForProvider(provider) {
@@ -117,7 +112,7 @@ export function setAIKey(key, provider = getAIProvider()) {
   return { key: key?.trim?.() || "", provider: normalizeProvider(provider) };
 }
 
-// Returns true if a key is available from embedded config or build-time env.
+// Returns true if a key is available from build-time environment variables.
 export function hasAnyAIKey() {
   return PROVIDER_PRIORITY.some((provider) => hasAIKeyForProvider(provider));
 }
@@ -581,7 +576,7 @@ async function* createOpenAICompatibleStream({ apiKey, endpoint, model, userText
 }
 
 async function* createOpenRouterStream({ apiKey, userText, systemPrompt, previousMessages }) {
-  const model = (EMBEDDED_OPENROUTER_MODEL || "openai/gpt-4o-mini").trim();
+  const model = (ENV_OPENROUTER_MODEL || DEFAULT_OPENROUTER_MODEL || "openai/gpt-4o-mini").trim();
   yield* createOpenAICompatibleStream({
     apiKey,
     endpoint: "https://openrouter.ai/api/v1/chat/completions",
@@ -598,7 +593,7 @@ async function* createOpenRouterStream({ apiKey, userText, systemPrompt, previou
 }
 
 async function* createAnthropicStream({ apiKey, userText, systemPrompt, previousMessages }) {
-  const model = (EMBEDDED_ANTHROPIC_MODEL || "claude-3-5-sonnet-latest").trim();
+  const model = (ENV_ANTHROPIC_MODEL || DEFAULT_ANTHROPIC_MODEL || "claude-3-5-sonnet-latest").trim();
   const body = {
     model,
     max_tokens: 1000,

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { EMBEDDED_ELEVENLABS_API_KEY, EMBEDDED_ELEVENLABS_VOICE_ID } from "../config/aiKeys";
+import { DEFAULT_ELEVENLABS_VOICE_ID } from "../config/aiKeys";
 
 // ── Feature detection ────────────────────────────────────────
 const SpeechRecognition =
@@ -70,8 +70,7 @@ function resolveElevenVoiceSettings(stylePreset, expressiveVoice) {
 }
 
 function resolveElevenLabsApiKey() {
-  const embedded = EMBEDDED_ELEVENLABS_API_KEY.trim();
-  return embedded || ENV_ELEVENLABS_API_KEY.trim();
+  return ENV_ELEVENLABS_API_KEY.trim();
 }
 
 function loadVoiceSettings() {
@@ -181,7 +180,7 @@ function computeProsodyForChunk(chunk, baseRate, expressive) {
 export function useVoice() {
   const elevenLabsApiKey = resolveElevenLabsApiKey();
   const elevenLabsAvailable = Boolean(elevenLabsApiKey);
-  const defaultElevenVoiceId = EMBEDDED_ELEVENLABS_VOICE_ID || "EXAVITQu4vr4xnSDxMaL";
+  const defaultElevenVoiceId = DEFAULT_ELEVENLABS_VOICE_ID || "EXAVITQu4vr4xnSDxMaL";
 
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");

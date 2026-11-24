@@ -217,7 +217,7 @@ function NoKeyScreen() {
       <div className="ai-nokey-icon">🔑</div>
       <h3>AI is not configured</h3>
       <p>
-        Add your provider and API key directly in src/config/aiKeys.js, then reload the app.
+        Add your provider and API key in .env.local, then reload the app.
       </p>
     </div>
   );
@@ -1287,17 +1287,17 @@ export default function AIChat({
                 {/* Error banners */}
                 {error === "bad_key" && (
                   <div className="ai-error-banner">
-                    ❌ The embedded API key was rejected by the provider. Update src/config/aiKeys.js.
+                    ❌ The configured API key was rejected by the provider. Update .env.local.
                   </div>
                 )}
                 {error === "api_error" && (
                   <div className="ai-error-banner ai-error-banner--warn">
-                    ⚠️ Request failed. Verify the embedded key/provider in src/config/aiKeys.js, and check internet access or API quota.
+                    ⚠️ Request failed. Verify provider variables in .env.local, and check internet access or API quota.
                   </div>
                 )}
                 {error === "quota_or_capacity" && (
                   <div className="ai-error-banner ai-error-banner--warn">
-                    ⚠️ AI request blocked by provider quota, low credits, or temporary high demand. Add a backup key/provider in src/config/aiKeys.js (for example OpenRouter) and try again.
+                    ⚠️ AI request blocked by provider quota, low credits, or temporary high demand. Add a backup provider key in .env.local and try again.
                   </div>
                 )}
               </>

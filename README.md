@@ -27,3 +27,23 @@ Notes:
 - It watches the entire repository and ignores folders like `.git`, `node_modules`, `dist`, logs, and `.env*` files.
 - Pushes target `origin/<current-branch>`.
 - If GitHub authentication is not configured, commits are created locally and push will fail until auth is fixed.
+
+## API Configuration (Env Only)
+
+This project now uses environment variables only for AI and voice API keys.
+Do not place real keys in source files.
+
+1. Copy `.env.example` to `.env.local`.
+2. Set `VITE_AI_PROVIDER` to one of: `openrouter`, `anthropic`, `gemini`, `openai`.
+3. Fill in at least one provider key:
+	- `VITE_OPENROUTER_API_KEY`
+	- `VITE_ANTHROPIC_API_KEY`
+	- `VITE_GEMINI_API_KEY`
+	- `VITE_OPENAI_API_KEY`
+4. Optional: set model overrides with `VITE_OPENROUTER_MODEL` and `VITE_ANTHROPIC_MODEL`.
+5. Optional: enable premium voice with `VITE_ELEVENLABS_API_KEY`.
+
+Security:
+
+- `.env`, `.env.*` are ignored by git in this repository.
+- Keep `.env.example` as placeholders only.

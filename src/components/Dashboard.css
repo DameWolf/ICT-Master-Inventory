@@ -234,6 +234,8 @@
 .reconcile-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .btn-export-reconcile {
@@ -256,6 +258,12 @@
 .btn-export-reconcile:disabled {
   opacity: 0.6;
   cursor: wait;
+}
+
+.reconcile-copy-status {
+  font-size: 11px;
+  font-weight: 700;
+  color: #14532d;
 }
 
 .reconcile-banner.is-ok {
@@ -358,6 +366,10 @@
   color: #2b0f19;
   background: linear-gradient(135deg, #ffe8b6, #ffd700);
   border-color: #ffd700;
+}
+
+[data-theme="dark"] .reconcile-copy-status {
+  color: #86efac;
 }
 
 /* ── Custom Tooltip ── */

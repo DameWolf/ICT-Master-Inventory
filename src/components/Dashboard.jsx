@@ -466,90 +466,184 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
         </div>
       </div>
 
-      <div className="charts-row charts-row-2">
-        <div className="chart-card" ref={reconciliationCardRef}>
-          <SectionHeader
-            title="Reconciled ICT Inventory Summary"
-            subtitle="Main Campus computing records accounted for and aligned to subtotal target"
-          />
+      <div className="chart-card inventory-filter-card">
+        <SectionHeader
+          title="Inventory Reports Filter & Summary"
+          subtitle="Filter by department/office, campus, user type, status, device fields, and summarize matched records"
+        />
 
-          <div className="reconcile-actions">
-            <button
-              className="btn-export-reconcile"
-              type="button"
-              onClick={handleCopyReconciliationPng}
-              disabled={copyingReconcile}
-              id="btn-copy-reconcile"
-            >
-              {copyingReconcile ? "Copying..." : "Copy Image"}
-            </button>
-            <button
-              className="btn-export-reconcile"
-              type="button"
-              onClick={handleExportReconciliationPng}
-              disabled={exportingReconcile}
-              id="btn-export-reconcile"
-            >
-              {exportingReconcile ? "Exporting..." : "Download PNG"}
-            </button>
-          </div>
-          {copyStatus && <div className="reconcile-copy-status">{copyStatus}</div>}
-
-          <div className={`reconcile-banner ${reconciliationStatus ? "is-ok" : "is-mismatch"}`}>
-            {reconciliationStatus
-              ? "All reconciliation targets are matched."
-              : "Reconciliation mismatch detected. Review variance values below."}
+        <div className="inv-filter-grid">
+          <div className="inv-filter-field inv-filter-field--search">
+            <label>Search</label>
+            <input
+              className="inv-filter-input"
+              type="text"
+              placeholder="Search asset tag, user, brand, model, or status"
+              value={filters.query}
+              onChange={(e) => updateFilter("query", e.target.value)}
+            />
           </div>
 
-          <div className="reconcile-table-wrap">
-            <table className="reconcile-table" aria-label="Reconciled ICT inventory summary">
-              <thead>
-                <tr>
-                  <th>Metric</th>
-                  <th>Actual</th>
-                  <th>Target</th>
-                  <th>Variance</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reconciliationRows.map((row) => (
-                  <tr key={row.label}>
-                    <td>{row.label}</td>
-                    <td>{row.actual.toLocaleString()}</td>
-                    <td>{row.target.toLocaleString()}</td>
-                    <td className={row.variance === 0 ? "var-zero" : row.variance > 0 ? "var-plus" : "var-minus"}>
-                      {row.variance > 0 ? `+${row.variance}` : row.variance}
-                    </td>
-                    <td>
-                      <span className={`reconcile-status-pill ${row.matched ? "is-ok" : "is-mismatch"}`}>
-                        {row.matched ? "Matched" : "Mismatch"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="inv-filter-field">
+            <label>Campus</label>
+            <select className="inv-filter-select" value={filters.campus} onChange={(e) => updateFilter("campus", e.target.value)}>
+              <option value="all">All</option>
+              {campusOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+
+          <div className="inv-filter-field">
+            <label>Department / Office</label>
+            <select className="inv-filter-select" value={filters.department} onChange={(e) => updateFilter("department", e.target.value)}>
+              <option value="all">All</option>
+              {departmentOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+
+          <div className="inv-filter-field">
+            <label>Office Type</label>
+            <select className="inv-filter-select" value={filters.officeType} onChange={(e) => updateFilter("officeType", e.target.value)}>
+              <option value="all">All</option>
+              {officeTypeOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+
+          <div className="inv-filter-field">
+            <label>User Type</label>
+            <select className="inv-filter-select" value={filters.userType} onChange={(e) => updateFilter("userType", e.target.value)}>
+              <option value="all">All</option>
+              {userTypeOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+
+          <div className="inv-filter-field">
+            <label>Status</label>
+            <select className="inv-filter-select" value={filters.status} onChange={(e) => updateFilter("status", e.target.value)}>
+              <option value="all">All</option>
+              {statusOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+
+          <div className="inv-filter-field">
+            <label>Category</label>
+            <select className="inv-filter-select" value={filters.category} onChange={(e) => updateFilter("category", e.target.value)}>
+              <option value="all">All</option>
+              {categoryOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+
+          <div className="inv-filter-field">
+            <label>Device Type</label>
+            <select className="inv-filter-select" value={filters.deviceType} onChange={(e) => updateFilter("deviceType", e.target.value)}>
+              <option value="all">All</option>
+              {deviceTypeOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+
+          <div className="inv-filter-field">
+            <label>Assigned User</label>
+            <select className="inv-filter-select" value={filters.assignedUser} onChange={(e) => updateFilter("assignedUser", e.target.value)}>
+              <option value="all">All</option>
+              {assignedUserOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+
+          <div className="inv-filter-field">
+            <label>Detail Field</label>
+            <select className="inv-filter-select" value={filters.detailKey} onChange={(e) => updateFilter("detailKey", e.target.value)}>
+              <option value="all">All</option>
+              {dynamicDetailKeys.map((k) => <option key={k} value={k}>{k}</option>)}
+            </select>
+          </div>
+
+          <div className="inv-filter-field">
+            <label>Detail Value</label>
+            <select
+              className="inv-filter-select"
+              value={filters.detailValue}
+              onChange={(e) => updateFilter("detailValue", e.target.value)}
+              disabled={filters.detailKey === "all"}
+            >
+              <option value="all">All</option>
+              {detailValueOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+
+          <div className="inv-filter-actions">
+            <button className="btn-filter-reset" type="button" onClick={resetFilters}>Reset Filters</button>
           </div>
         </div>
 
-        <div className="chart-card">
-          <SectionHeader title="Reconciliation Comparison" subtitle="Actual vs target checkpoints" />
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={reconciliationChartData} margin={{ left: 10, right: 20, top: 8, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-              <XAxis dataKey="metric" tick={{ fontSize: 11, fill: textColor, fontWeight: 700 }} />
-              <YAxis tick={{ fontSize: 11, fill: mutedColor }} />
-              <RTooltip content={<CustomTooltip />} />
-              <Legend
-                iconType="circle"
-                iconSize={10}
-                formatter={(v) => <span style={{ fontSize: 11, fontWeight: 700, color: textColor }}>{v}</span>}
-              />
-              <Bar dataKey="Actual" fill={darkMode ? "#ffd700" : "#800020"} radius={[6, 6, 0, 0]} />
-              <Bar dataKey="Target" fill="#22c55e" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="inv-filter-kpis">
+          <div className="inv-filter-kpi"><span>Matched Reports</span><strong>{filteredInventory.length.toLocaleString()}</strong></div>
+          <div className="inv-filter-kpi"><span>Total Inventory</span><strong>{total.toLocaleString()}</strong></div>
+          <div className="inv-filter-kpi"><span>Coverage</span><strong>{total ? `${Math.round((filteredInventory.length / total) * 100)}%` : "0%"}</strong></div>
+        </div>
+
+        <div className="inv-summary-grid">
+          <div className="inv-summary-card">
+            <h4>Status Summary</h4>
+            <ul>
+              {filteredStatusCounts.map((row) => <li key={row.name}><span>{row.name}</span><strong>{row.count.toLocaleString()}</strong></li>)}
+            </ul>
+          </div>
+          <div className="inv-summary-card">
+            <h4>Campus Summary</h4>
+            <ul>
+              {filteredCampusCounts.map((row) => <li key={row.name}><span>{row.name}</span><strong>{row.count.toLocaleString()}</strong></li>)}
+            </ul>
+          </div>
+          <div className="inv-summary-card">
+            <h4>Category Summary</h4>
+            <ul>
+              {filteredCategoryCounts.slice(0, 10).map((row) => <li key={row.name}><span>{row.name}</span><strong>{row.count.toLocaleString()}</strong></li>)}
+            </ul>
+          </div>
+        </div>
+
+        <div className="inv-report-table-wrap">
+          <table className="inv-report-table" aria-label="Filtered inventory reports table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Device</th>
+                <th>Campus</th>
+                <th>Department</th>
+                <th>Office Type</th>
+                <th>User Type</th>
+                <th>Assigned User</th>
+                <th>Status</th>
+                <th>Asset Tag</th>
+                <th>Brand / Model</th>
+                <th>Year</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredInventory.slice(0, 300).map((item) => (
+                <tr key={item.id}>
+                  <td>{item.category || item.tabCategory || "-"}</td>
+                  <td>{item.deviceType || item.name || "-"}</td>
+                  <td>{item.campus || "-"}</td>
+                  <td>{item.department || "-"}</td>
+                  <td>{item.officeType || "-"}</td>
+                  <td>{item.userType || "-"}</td>
+                  <td>{item.assignedUser || "-"}</td>
+                  <td>{item.status || "-"}</td>
+                  <td>{item.assetTag || "-"}</td>
+                  <td>{[item.brand, item.model].filter(Boolean).join(" / ") || "-"}</td>
+                  <td>{item.yearPurchased || "-"}</td>
+                </tr>
+              ))}
+              {filteredInventory.length === 0 && (
+                <tr>
+                  <td colSpan={11} className="inv-report-empty">No records match the selected filters.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          {filteredInventory.length > 300 && (
+            <p className="inv-report-note">Showing first 300 matched records. Refine filters to narrow results.</p>
+          )}
         </div>
       </div>
 

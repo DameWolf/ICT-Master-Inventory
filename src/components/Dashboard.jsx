@@ -146,6 +146,48 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
       .map(([name, value]) => ({ name, value }));
   }, [inventory, catData]);
 
+  const reconciliationRows = useMemo(() => {
+    const isMainCampus = (value) => String(value || "").trim().toLowerCase().includes("main");
+    const isComputing = (item) => {
+      const cat = String(item.category || item.tabCategory || "").trim().toLowerCase();
+      return cat === "computing devices";
+    };
+
+    const mainCampusComputing = inventory.filter((item) => isMainCampus(item.campus) && isComputing(item)).length;
+    const subtotal = inventory.length;
+
+    const targetMainCampusComputing = 42;
+    const targetSubtotal = 498;
+
+    return [
+      {
+        label: "Main Campus · Computing Records",
+        actual: mainCampusComputing,
+        target: targetMainCampusComputing,
+      },
+      {
+        label: "Inventory Subtotal",
+        actual: subtotal,
+        target: targetSubtotal,
+      },
+    ].map((row) => ({
+      ...row,
+      variance: row.actual - row.target,
+      matched: row.actual === row.target,
+    }));
+  }, [inventory]);
+
+  const reconciliationStatus = reconciliationRows.every((row) => row.matched);
+
+  const reconciliationChartData = useMemo(
+    () => reconciliationRows.map((row) => ({
+      metric: row.label.replace("Main Campus · ", ""),
+      Actual: row.actual,
+      Target: row.target,
+    })),
+    [reconciliationRows]
+  );
+
   const categoryCards = useMemo(() =>
     CATEGORIES.map((cat) => {
       const count = inventory.filter((i) => i.category === cat.name || i.tabCategory === cat.name).length;
@@ -294,6 +336,71 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
               <Bar dataKey="count" name="Total" fill={darkMode ? "#9E1B32" : "#800020"} radius={[6, 6, 0, 0]} />
               <Bar dataKey="functional" name="Functional" fill="#22c55e" radius={[6, 6, 0, 0]} />
               <Bar dataKey="defective" name="Defective" fill="#ef4444" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="charts-row charts-row-2">
+        <div className="chart-card">
+          <SectionHeader
+            title="Reconciled ICT Inventory Summary"
+            subtitle="Main Campus computing records accounted for and aligned to subtotal target"
+          />
+
+          <div className={`reconcile-banner ${reconciliationStatus ? "is-ok" : "is-mismatch"}`}>
+            {reconciliationStatus
+              ? "All reconciliation targets are matched."
+              : "Reconciliation mismatch detected. Review variance values below."}
+          </div>
+
+          <div className="reconcile-table-wrap">
+            <table className="reconcile-table" aria-label="Reconciled ICT inventory summary">
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th>Actual</th>
+                  <th>Target</th>
+                  <th>Variance</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reconciliationRows.map((row) => (
+                  <tr key={row.label}>
+                    <td>{row.label}</td>
+                    <td>{row.actual.toLocaleString()}</td>
+                    <td>{row.target.toLocaleString()}</td>
+                    <td className={row.variance === 0 ? "var-zero" : row.variance > 0 ? "var-plus" : "var-minus"}>
+                      {row.variance > 0 ? `+${row.variance}` : row.variance}
+                    </td>
+                    <td>
+                      <span className={`reconcile-status-pill ${row.matched ? "is-ok" : "is-mismatch"}`}>
+                        {row.matched ? "Matched" : "Mismatch"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <SectionHeader title="Reconciliation Comparison" subtitle="Actual vs target checkpoints" />
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={reconciliationChartData} margin={{ left: 10, right: 20, top: 8, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis dataKey="metric" tick={{ fontSize: 11, fill: textColor, fontWeight: 700 }} />
+              <YAxis tick={{ fontSize: 11, fill: mutedColor }} />
+              <RTooltip content={<CustomTooltip />} />
+              <Legend
+                iconType="circle"
+                iconSize={10}
+                formatter={(v) => <span style={{ fontSize: 11, fontWeight: 700, color: textColor }}>{v}</span>}
+              />
+              <Bar dataKey="Actual" fill={darkMode ? "#ffd700" : "#800020"} radius={[6, 6, 0, 0]} />
+              <Bar dataKey="Target" fill="#22c55e" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

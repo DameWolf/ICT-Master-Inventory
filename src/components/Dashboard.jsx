@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useRef, useState } from "react";
+import html2canvas from "html2canvas";
 import {
   PieChart, Pie, Cell, Tooltip as RTooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -63,6 +64,8 @@ function SectionHeader({ title, subtitle }) {
 }
 
 export default function Dashboard({ inventory, onSelectCategory, onViewAll, darkMode }) {
+  const reconciliationCardRef = useRef(null);
+  const [exportingReconcile, setExportingReconcile] = useState(false);
   const total = inventory.length;
 
   const statusSummary = useMemo(() => {
@@ -196,6 +199,30 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
       return { ...cat, count, pct };
     }),
   [inventory]);
+
+  const handleExportReconciliationPng = async () => {
+    if (!reconciliationCardRef.current || exportingReconcile) return;
+    setExportingReconcile(true);
+    try {
+      const canvas = await html2canvas(reconciliationCardRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: darkMode ? "#1c0a12" : "#ffffff",
+      });
+
+      const dataUrl = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `ict-reconciled-summary-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("Failed to export reconciliation PNG:", err);
+    } finally {
+      setExportingReconcile(false);
+    }
+  };
 
   return (
     <div className="dashboard">
@@ -342,11 +369,23 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
       </div>
 
       <div className="charts-row charts-row-2">
-        <div className="chart-card">
+        <div className="chart-card" ref={reconciliationCardRef}>
           <SectionHeader
             title="Reconciled ICT Inventory Summary"
             subtitle="Main Campus computing records accounted for and aligned to subtotal target"
           />
+
+          <div className="reconcile-actions">
+            <button
+              className="btn-export-reconcile"
+              type="button"
+              onClick={handleExportReconciliationPng}
+              disabled={exportingReconcile}
+              id="btn-export-reconcile"
+            >
+              {exportingReconcile ? "Exporting..." : "Download PNG"}
+            </button>
+          </div>
 
           <div className={`reconcile-banner ${reconciliationStatus ? "is-ok" : "is-mismatch"}`}>
             {reconciliationStatus

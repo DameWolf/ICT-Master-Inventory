@@ -66,6 +66,8 @@ function SectionHeader({ title, subtitle }) {
 export default function Dashboard({ inventory, onSelectCategory, onViewAll, darkMode }) {
   const reconciliationCardRef = useRef(null);
   const [exportingReconcile, setExportingReconcile] = useState(false);
+  const [copyingReconcile, setCopyingReconcile] = useState(false);
+  const [copyStatus, setCopyStatus] = useState("");
   const total = inventory.length;
 
   const statusSummary = useMemo(() => {
@@ -204,6 +206,8 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
     if (!reconciliationCardRef.current || exportingReconcile) return;
     setExportingReconcile(true);
     try {
+      const today = new Date().toISOString().slice(0, 10);
+      const fileName = `ICT_Reconciled_Summary_MainCampus_498_${today}.png`;
       const canvas = await html2canvas(reconciliationCardRef.current, {
         scale: 2,
         useCORS: true,
@@ -213,7 +217,7 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
       const dataUrl = canvas.toDataURL("image/png");
       const a = document.createElement("a");
       a.href = dataUrl;
-      a.download = `ict-reconciled-summary-${Date.now()}.png`;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -221,6 +225,34 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
       console.error("Failed to export reconciliation PNG:", err);
     } finally {
       setExportingReconcile(false);
+    }
+  };
+
+  const handleCopyReconciliationPng = async () => {
+    if (!reconciliationCardRef.current || copyingReconcile) return;
+    setCopyingReconcile(true);
+    setCopyStatus("");
+    try {
+      const canvas = await html2canvas(reconciliationCardRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: darkMode ? "#1c0a12" : "#ffffff",
+      });
+
+      if (navigator.clipboard && window.ClipboardItem) {
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+        if (!blob) throw new Error("Failed to generate image blob.");
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        setCopyStatus("Copied to clipboard.");
+      } else {
+        setCopyStatus("Clipboard image copy not supported in this browser.");
+      }
+    } catch (err) {
+      console.error("Failed to copy reconciliation PNG:", err);
+      setCopyStatus("Copy failed. Try Download PNG instead.");
+    } finally {
+      setCopyingReconcile(false);
+      setTimeout(() => setCopyStatus(""), 2600);
     }
   };
 
@@ -379,6 +411,15 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
             <button
               className="btn-export-reconcile"
               type="button"
+              onClick={handleCopyReconciliationPng}
+              disabled={copyingReconcile}
+              id="btn-copy-reconcile"
+            >
+              {copyingReconcile ? "Copying..." : "Copy Image"}
+            </button>
+            <button
+              className="btn-export-reconcile"
+              type="button"
               onClick={handleExportReconciliationPng}
               disabled={exportingReconcile}
               id="btn-export-reconcile"
@@ -386,6 +427,7 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
               {exportingReconcile ? "Exporting..." : "Download PNG"}
             </button>
           </div>
+          {copyStatus && <div className="reconcile-copy-status">{copyStatus}</div>}
 
           <div className={`reconcile-banner ${reconciliationStatus ? "is-ok" : "is-mismatch"}`}>
             {reconciliationStatus

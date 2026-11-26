@@ -222,6 +222,111 @@
   overflow: hidden;
 }
 
+/* ── Reconciliation insight ── */
+.reconcile-banner {
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid;
+}
+
+.reconcile-banner.is-ok {
+  color: #14532d;
+  background: #ecfdf3;
+  border-color: #86efac;
+}
+
+.reconcile-banner.is-mismatch {
+  color: #7f1d1d;
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.reconcile-table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #eadfce;
+}
+
+.reconcile-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 560px;
+  background: #fff;
+}
+
+.reconcile-table th,
+.reconcile-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0e8e0;
+  font-size: 12px;
+  text-align: left;
+}
+
+.reconcile-table th {
+  background: #f9f4ee;
+  font-weight: 800;
+  color: #800020;
+}
+
+.reconcile-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.var-zero {
+  color: #14532d;
+  font-weight: 800;
+}
+
+.var-plus {
+  color: #9a3412;
+  font-weight: 800;
+}
+
+.var-minus {
+  color: #991b1b;
+  font-weight: 800;
+}
+
+.reconcile-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.reconcile-status-pill.is-ok {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.reconcile-status-pill.is-mismatch {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+[data-theme="dark"] .reconcile-table-wrap {
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+[data-theme="dark"] .reconcile-table {
+  background: #1a0810;
+}
+
+[data-theme="dark"] .reconcile-table th {
+  background: #2b0f19;
+  color: #ffd700;
+}
+
+[data-theme="dark"] .reconcile-table td {
+  color: #fff;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
 /* ── Custom Tooltip ── */
 .chart-tooltip {
   background: #ffffff;

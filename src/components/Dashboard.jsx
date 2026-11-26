@@ -1,5 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
-import html2canvas from "html2canvas";
+import React, { useMemo, useState } from "react";
 import {
   PieChart, Pie, Cell, Tooltip as RTooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -64,10 +63,19 @@ function SectionHeader({ title, subtitle }) {
 }
 
 export default function Dashboard({ inventory, onSelectCategory, onViewAll, darkMode }) {
-  const reconciliationCardRef = useRef(null);
-  const [exportingReconcile, setExportingReconcile] = useState(false);
-  const [copyingReconcile, setCopyingReconcile] = useState(false);
-  const [copyStatus, setCopyStatus] = useState("");
+  const [filters, setFilters] = useState({
+    query: "",
+    campus: "all",
+    department: "all",
+    officeType: "all",
+    userType: "all",
+    status: "all",
+    category: "all",
+    deviceType: "all",
+    assignedUser: "all",
+    detailKey: "all",
+    detailValue: "all",
+  });
   const total = inventory.length;
 
   const statusSummary = useMemo(() => {
@@ -151,47 +159,135 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
       .map(([name, value]) => ({ name, value }));
   }, [inventory, catData]);
 
-  const reconciliationRows = useMemo(() => {
-    const isMainCampus = (value) => String(value || "").trim().toLowerCase().includes("main");
-    const isComputing = (item) => {
-      const cat = String(item.category || item.tabCategory || "").trim().toLowerCase();
-      return cat === "computing devices";
-    };
+  const getItemFieldValue = (item, key) => {
+    if (!key || key === "all") return "";
+    const value = item?.[key];
+    if (value === null || value === undefined) return "";
+    return String(value).trim();
+  };
 
-    const mainCampusComputing = inventory.filter((item) => isMainCampus(item.campus) && isComputing(item)).length;
-    const subtotal = inventory.length;
+  const uniqueOptions = (key) => {
+    const set = new Set();
+    inventory.forEach((item) => {
+      const value = getItemFieldValue(item, key);
+      if (value) set.add(value);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  };
 
-    const targetMainCampusComputing = 42;
-    const targetSubtotal = 498;
+  const campusOptions = useMemo(() => uniqueOptions("campus"), [inventory]);
+  const departmentOptions = useMemo(() => uniqueOptions("department"), [inventory]);
+  const officeTypeOptions = useMemo(() => uniqueOptions("officeType"), [inventory]);
+  const userTypeOptions = useMemo(() => uniqueOptions("userType"), [inventory]);
+  const statusOptions = useMemo(() => uniqueOptions("status"), [inventory]);
+  const categoryOptions = useMemo(() => {
+    const set = new Set();
+    inventory.forEach((item) => {
+      const value = String(item?.category || item?.tabCategory || "").trim();
+      if (value) set.add(value);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [inventory]);
+  const deviceTypeOptions = useMemo(() => uniqueOptions("deviceType"), [inventory]);
+  const assignedUserOptions = useMemo(() => uniqueOptions("assignedUser"), [inventory]);
 
-    return [
-      {
-        label: "Main Campus · Computing Records",
-        actual: mainCampusComputing,
-        target: targetMainCampusComputing,
-      },
-      {
-        label: "Inventory Subtotal",
-        actual: subtotal,
-        target: targetSubtotal,
-      },
-    ].map((row) => ({
-      ...row,
-      variance: row.actual - row.target,
-      matched: row.actual === row.target,
-    }));
+  const dynamicDetailKeys = useMemo(() => {
+    const excluded = new Set([
+      "id", "name", "category", "tabCategory", "sheetTab", "sheetRowIndex", "rawRow", "remarks",
+      "campus", "department", "officeType", "userType", "status", "deviceType", "assignedUser",
+    ]);
+    const keys = new Set();
+    inventory.forEach((item) => {
+      Object.keys(item || {}).forEach((key) => {
+        if (excluded.has(key) || key.startsWith("_")) return;
+        const value = getItemFieldValue(item, key);
+        if (value) keys.add(key);
+      });
+    });
+    return Array.from(keys).sort((a, b) => a.localeCompare(b));
   }, [inventory]);
 
-  const reconciliationStatus = reconciliationRows.every((row) => row.matched);
+  const detailValueOptions = useMemo(() => {
+    if (!filters.detailKey || filters.detailKey === "all") return [];
+    const set = new Set();
+    inventory.forEach((item) => {
+      const value = getItemFieldValue(item, filters.detailKey);
+      if (value) set.add(value);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [inventory, filters.detailKey]);
 
-  const reconciliationChartData = useMemo(
-    () => reconciliationRows.map((row) => ({
-      metric: row.label.replace("Main Campus · ", ""),
-      Actual: row.actual,
-      Target: row.target,
-    })),
-    [reconciliationRows]
-  );
+  const filteredInventory = useMemo(() => {
+    const q = filters.query.trim().toLowerCase();
+    return inventory.filter((item) => {
+      const category = String(item?.category || item?.tabCategory || "").trim();
+
+      if (filters.campus !== "all" && getItemFieldValue(item, "campus") !== filters.campus) return false;
+      if (filters.department !== "all" && getItemFieldValue(item, "department") !== filters.department) return false;
+      if (filters.officeType !== "all" && getItemFieldValue(item, "officeType") !== filters.officeType) return false;
+      if (filters.userType !== "all" && getItemFieldValue(item, "userType") !== filters.userType) return false;
+      if (filters.status !== "all" && getItemFieldValue(item, "status") !== filters.status) return false;
+      if (filters.category !== "all" && category !== filters.category) return false;
+      if (filters.deviceType !== "all" && getItemFieldValue(item, "deviceType") !== filters.deviceType) return false;
+      if (filters.assignedUser !== "all" && getItemFieldValue(item, "assignedUser") !== filters.assignedUser) return false;
+      if (filters.detailKey !== "all" && filters.detailValue !== "all" && getItemFieldValue(item, filters.detailKey) !== filters.detailValue) return false;
+
+      if (q) {
+        const haystack = [
+          category,
+          item?.deviceType,
+          item?.campus,
+          item?.department,
+          item?.officeType,
+          item?.userType,
+          item?.assignedUser,
+          item?.assetTag,
+          item?.brand,
+          item?.model,
+          item?.status,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+
+      return true;
+    });
+  }, [inventory, filters]);
+
+  const filteredStatusCounts = useMemo(() => {
+    const counts = {};
+    filteredInventory.forEach((item) => {
+      const key = getItemFieldValue(item, "status") || "Unknown";
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [filteredInventory]);
+
+  const filteredCampusCounts = useMemo(() => {
+    const counts = {};
+    filteredInventory.forEach((item) => {
+      const key = getItemFieldValue(item, "campus") || "Unknown";
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [filteredInventory]);
+
+  const filteredCategoryCounts = useMemo(() => {
+    const counts = {};
+    filteredInventory.forEach((item) => {
+      const key = String(item?.category || item?.tabCategory || "Unknown").trim() || "Unknown";
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [filteredInventory]);
 
   const categoryCards = useMemo(() =>
     CATEGORIES.map((cat) => {
@@ -202,58 +298,28 @@ export default function Dashboard({ inventory, onSelectCategory, onViewAll, dark
     }),
   [inventory]);
 
-  const handleExportReconciliationPng = async () => {
-    if (!reconciliationCardRef.current || exportingReconcile) return;
-    setExportingReconcile(true);
-    try {
-      const today = new Date().toISOString().slice(0, 10);
-      const fileName = `ICT_Reconciled_Summary_MainCampus_498_${today}.png`;
-      const canvas = await html2canvas(reconciliationCardRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: darkMode ? "#1c0a12" : "#ffffff",
-      });
-
-      const dataUrl = canvas.toDataURL("image/png");
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } catch (err) {
-      console.error("Failed to export reconciliation PNG:", err);
-    } finally {
-      setExportingReconcile(false);
-    }
+  const updateFilter = (key, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+      ...(key === "detailKey" ? { detailValue: "all" } : {}),
+    }));
   };
 
-  const handleCopyReconciliationPng = async () => {
-    if (!reconciliationCardRef.current || copyingReconcile) return;
-    setCopyingReconcile(true);
-    setCopyStatus("");
-    try {
-      const canvas = await html2canvas(reconciliationCardRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: darkMode ? "#1c0a12" : "#ffffff",
-      });
-
-      if (navigator.clipboard && window.ClipboardItem) {
-        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
-        if (!blob) throw new Error("Failed to generate image blob.");
-        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-        setCopyStatus("Copied to clipboard.");
-      } else {
-        setCopyStatus("Clipboard image copy not supported in this browser.");
-      }
-    } catch (err) {
-      console.error("Failed to copy reconciliation PNG:", err);
-      setCopyStatus("Copy failed. Try Download PNG instead.");
-    } finally {
-      setCopyingReconcile(false);
-      setTimeout(() => setCopyStatus(""), 2600);
-    }
+  const resetFilters = () => {
+    setFilters({
+      query: "",
+      campus: "all",
+      department: "all",
+      officeType: "all",
+      userType: "all",
+      status: "all",
+      category: "all",
+      deviceType: "all",
+      assignedUser: "all",
+      detailKey: "all",
+      detailValue: "all",
+    });
   };
 
   return (
